@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { COUNTRY_LABELS, MAP_LAYOUT, NEIGHBOR_PATHS, SEA_LABELS, VIETNAM_PATH } from '../geo/vietnam';
+import { COUNTRY_LABELS, ISLAND_LABELS, ISLAND_PATH, MAP_LAYOUT, NEIGHBOR_PATHS, SEA_LABELS, VIETNAM_PATH } from '../geo/vietnam';
 
 export interface MapPoint {
   x: number;
@@ -64,6 +64,7 @@ export function VietnamMap({ pin, correct, guesses = [], interactive, onPin }: P
           <path key={shape.id} className="neighbor" d={shape.d} />
         ))}
         <path className="land" d={VIETNAM_PATH} />
+        <path className="land islands" d={ISLAND_PATH} />
         {COUNTRY_LABELS.map((label) => (
           <text key={label.text} className="map-label country" x={label.x} y={label.y} textAnchor={label.anchor}>
             {label.text}
@@ -77,6 +78,14 @@ export function VietnamMap({ pin, correct, guesses = [], interactive, onPin }: P
         <text className="map-label north" x="40" y="46">
           BẮC
         </text>
+        {ISLAND_LABELS.map((label) => (
+          <text key={label.title} className="map-label isle-label" x={label.x} y={label.y} textAnchor="middle">
+            {label.title}
+            <tspan className="sub" x={label.x} dy="22">
+              (Việt Nam)
+            </tspan>
+          </text>
+        ))}
         {guesses.map((guess, index) => (
           <circle key={`${guess.x}-${guess.y}-${index}`} className="guess-dot" cx={guess.x} cy={guess.y} r="5" />
         ))}
@@ -93,12 +102,13 @@ export function VietnamMap({ pin, correct, guesses = [], interactive, onPin }: P
           </g>
         )}
       </svg>
-      <p className="map-note">Sơ đồ minh họa, không phải bản đồ hành chính.</p>
+      <p className="map-note">Sơ đồ minh họa, có Quần đảo Hoàng Sa và Trường Sa. Không phải bản đồ hành chính.</p>
       {loupe && zoom && (
         <div className="loupe" style={{ left: loupe.cx, top: loupe.cy }}>
           <svg viewBox={zoom} aria-hidden="true">
             <rect className="sea" x={loupe.x - 40} y={loupe.y - 40} width="80" height="80" />
             <path className="land" d={VIETNAM_PATH} />
+            <path className="land islands" d={ISLAND_PATH} />
             <circle cx={loupe.x} cy={loupe.y} r="3" className="player-pin-dot" />
           </svg>
         </div>

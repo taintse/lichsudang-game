@@ -373,8 +373,18 @@ h1 { font-size: clamp(2rem, 5vw, 4.4rem); margin: 0.15em 0; font-weight: 900; }
 .bank { font-size: 1.2rem; }
 .chip { padding: 8px 10px; }
 
-.map-wrap { position: relative; }
-.vn-map { width: 100%; height: auto; background: #e7f0e4; border: 3px solid var(--ink); border-radius: 18px; touch-action: none; }
+.map-wrap { position: relative; overflow: visible; }
+.vn-map {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-width: 100%;
+  background: #e7f0e4;
+  border: 3px solid var(--ink);
+  border-radius: 18px;
+  touch-action: none;
+  overflow: visible;
+}
 .vn-map.interactive { cursor: crosshair; }
 .sea { fill: #d7e7d8; }
 .neighbor { fill: #ead7b8; stroke: #b08968; stroke-width: 1.4; }
@@ -389,7 +399,9 @@ h1 { font-size: clamp(2rem, 5vw, 4.4rem); margin: 0.15em 0; font-weight: 900; }
   stroke-width: 3px;
   paint-order: stroke fill;
 }
-.sea-label { fill: #245c45; letter-spacing: 0; text-anchor: start; }
+.sea-label { fill: #245c45; letter-spacing: 0; text-anchor: start; font-size: 15px; }
+.isle-label { font-size: 22px; fill: #6e1214; font-weight: 800; }
+.isle-label .sub { font-size: 16px; font-weight: 800; fill: #6e1214; }
 .north { fill: var(--band); }
 .player-pin circle { fill: var(--band); stroke: #fff6e4; stroke-width: 2; }
 .player-pin .core, .player-pin-dot { fill: var(--gold); stroke: var(--ink); stroke-width: 1; }
@@ -448,7 +460,7 @@ h1 { font-size: clamp(2rem, 5vw, 4.4rem); margin: 0.15em 0; font-weight: 900; }
   .reveal.big:has(.map-wrap) .map-wrap { grid-column: 1; grid-row: 3; }
   .reveal.big:has(.answer-list) .explain,
   .reveal.big:has(.map-wrap) .explain { grid-column: 2; grid-row: 3; }
-  .reveal.big .vn-map { max-height: 480px; width: auto; max-width: 100%; }
+  .reveal.big .vn-map { max-height: min(72vh, 760px); width: auto; max-width: 100%; }
 }
 .answer-list { list-style: none; padding: 0; display: grid; gap: 8px; }
 .answer-list li, .final-list li {
