@@ -16,7 +16,7 @@ interface Props {
   you: YouState;
   now: number;
   onTimeline: (order: string[]) => void;
-  onMap: (point: { x: number; y: number }) => void;
+  onMap: (choice: string) => void;
   onClue: (text: string) => void;
   onMatch: (leftId: string, rightId: string) => void;
   onBet: (pct: number, optionId: string) => void;
@@ -160,14 +160,14 @@ function PlaySwitch(props: {
   locked: boolean;
   elapsed: number;
   onTimeline: (order: string[]) => void;
-  onMap: (point: { x: number; y: number }) => void;
+  onMap: (choice: string) => void;
   onClue: (text: string) => void;
   onMatch: (leftId: string, rightId: string) => void;
   onBet: (pct: number, optionId: string) => void;
 }) {
   const { challenge, you, locked } = props;
   if (challenge.t === 'timeline') return <TimelineBoard challenge={challenge} you={you} locked={locked} onSubmit={props.onTimeline} />;
-  if (challenge.t === 'map') return <MapBoard you={you} locked={locked} onSubmit={props.onMap} />;
+  if (challenge.t === 'map') return <MapBoard challenge={challenge} you={you} locked={locked} onSubmit={props.onMap} />;
   if (challenge.t === 'clues') return <ClueBoard challenge={challenge} you={you} locked={locked} elapsed={props.elapsed} onSubmit={props.onClue} />;
   if (challenge.t === 'match') return <MatchBoard challenge={challenge} you={you} locked={locked} onPair={props.onMatch} />;
   return <BetBoard challenge={challenge} you={you} locked={locked} onSubmit={props.onBet} />;
