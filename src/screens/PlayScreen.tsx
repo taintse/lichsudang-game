@@ -4,7 +4,7 @@ import { makePlayerId, normalizeCode } from '../game/id';
 import { sounds } from '../audio/sound';
 import { AVATAR_IDS, AVATAR_LABELS, type PublicState, type YouState } from '../game/types';
 import { clearIdentity, loadIdentity, saveIdentity, type Identity } from '../net/identity';
-import { PlayerClient, type PlayerStatus } from '../net/playerClient';
+import { PlayerClient, type PlayerNet } from '../net/playerClient';
 import { Avatar, Grain, Star } from '../components/art';
 import { PlayerView, useNow } from './PlayerView';
 
@@ -16,10 +16,10 @@ export function PlayScreen() {
   const [avatar, setAvatar] = useState<string>(AVATAR_IDS[0]);
   const [pub, setPub] = useState<PublicState | null>(null);
   const [you, setYou] = useState<YouState | null>(null);
-  const [status, setStatus] = useState<PlayerStatus>('closed');
-  const [detail, setDetail] = useState<string | null>(null);
+  const [net, setNet] = useState<PlayerNet>({ status: 'closed', detail: '', debug: '', stalled: false });
   const [toast, setToast] = useState<string | null>(null);
   const [kicked, setKicked] = useState<string | null>(null);
+  const [closed, setClosed] = useState<string | null>(null);
   const [live, setLive] = useState(false);
   const clientRef = useRef<PlayerClient | null>(null);
   const now = useNow(pub?.serverNow ?? null);
@@ -32,25 +32,26 @@ export function PlayScreen() {
       onState: (nextPub, nextYou) => {
         setPub(nextPub);
         setYou(nextYou);
-        setStatus('open');
       },
       onKicked: (reason) => {
         setKicked(reason);
+        clearIdentity();
+      },
+      onClosed: (reason) => {
+        setClosed(reason);
         clearIdentity();
       },
       onError: (message) => {
         setToast(message);
         window.setTimeout(() => setToast((current) => (current === message ? null : current)), 2400);
       },
-      onStatus: (next, text) => {
-        setStatus(next);
-        setDetail(text ?? null);
-      },
+      onNet: (info) => setNet(info),
     });
     clientRef.current = client;
     client.start();
     setLive(true);
     setKicked(null);
+    setClosed(null);
   }
 
   useEffect(() => {
@@ -66,6 +67,33 @@ export function PlayScreen() {
     // connect identity is local; this effect only auto-rejoins a saved player
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.code]);
+
+  if (closed) {
+    return (
+      <div className="screen theme-flame player">
+        <Grain />
+        <main className="home-main">
+          <h1>Phòng đã đóng</h1>
+          <p className="lead">{closed}</p>
+          <button
+            type="button"
+            className="btn btn-red"
+            data-testid="join-new"
+            onClick={() => {
+              setClosed(null);
+              setLive(false);
+              setPub(null);
+              setYou(null);
+              setCode('');
+              setNet({ status: 'closed', detail: '', debug: '', stalled: false });
+            }}
+          >
+            Nhập mã mới
+          </button>
+        </main>
+      </div>
+    );
+  }
 
   if (kicked) {
     return (
@@ -146,8 +174,25 @@ export function PlayScreen() {
             <button type="submit" className="btn btn-red" data-testid="join-submit" disabled={normalizeCode(code).length !== 4 || name.trim().length < 1}>
               Vào lớp
             </button>
-            {live && <p className="notice">{detail ?? 'Đang nối vào máy chiếu…'}</p>}
-            {status === 'connecting' && live && <p className="fine">Nếu chờ lâu, kiểm tra mã và chắc rằng tab máy chiếu vẫn mở.</p>}
+            {live && <p className="notice">{net.detail || 'Đang nối vào máy chiếu…'}</p>}
+            {live && net.debug && (
+              <p className="fine" data-testid="net-debug">
+                {net.debug}
+              </p>
+            )}
+            {live && net.stalled && (
+              <button
+                type="button"
+                className="btn"
+                data-testid="join-retry"
+                onClick={() => {
+                  const saved = loadIdentity();
+                  if (saved) connect(saved);
+                }}
+              >
+                Thử lại
+              </button>
+            )}
           </form>
         </main>
       </div>
@@ -157,7 +202,7 @@ export function PlayScreen() {
   return (
     <>
       {toast && <p className="toast">{toast}</p>}
-      {status === 'connecting' && <p className="toast">{detail ?? 'Đang nối lại…'}</p>}
+      {net.status === 'connecting' && <p className="toast">{[net.detail || 'Đang nối lại…', net.debug].filter(Boolean).join(' · ')}</p>}
       <PlayerView
         pub={pub}
         you={you}

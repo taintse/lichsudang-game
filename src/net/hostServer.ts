@@ -1,17 +1,14 @@
-import Peer, { type DataConnection } from 'peerjs';
 import type { GameRoom } from '../game/room';
-import { makeCode, peerIdFromCode } from '../game/id';
 import type { ClientMessage, ServerMessage } from '../game/types';
-
-const ICE: RTCConfiguration = {
-  iceServers: [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }],
-};
+import { Relay } from './relay';
+import { roomTopics } from './topics';
 
 export type NetStatus = 'connecting' | 'open' | 'error';
 
 export interface NetNotice {
   status: NetStatus;
   error?: string;
+  debug?: string;
   unavailable?: boolean;
 }
 
@@ -46,11 +43,13 @@ function parseClient(raw: unknown): ClientMessage | null {
 }
 
 export class HostServer {
-  private peer: Peer | null = null;
-  private conns = new Map<string, DataConnection>();
+  private relay: Relay | null = null;
+  private topics: ReturnType<typeof roomTopics> | null = null;
   private timer: number | null = null;
   private heartbeat: number | null = null;
+  private stall: number | null = null;
   private destroyed = false;
+  private seen: string[] = [];
   code = '';
 
   constructor(
@@ -58,47 +57,34 @@ export class HostServer {
     private onChange: (notice: NetNotice) => void,
   ) {}
 
-  start(code = makeCode()) {
-    this.stopPeer();
+  start(code: string) {
+    this.destroyRelay();
+    this.destroyed = false;
     this.code = code;
-    this.onChange({ status: 'connecting' });
-    const peer = new Peer(peerIdFromCode(code), { config: ICE, debug: 0 });
-    this.peer = peer;
-    peer.on('open', () => {
-      if (this.destroyed || this.peer !== peer) return;
-      this.onChange({ status: 'open' });
-      this.armHeartbeat();
-    });
-    peer.on('connection', (conn) => this.bind(conn));
-    peer.on('disconnected', () => {
-      if (this.destroyed || this.peer !== peer) return;
-      this.onChange({ status: 'connecting', error: 'Mất kết nối phòng. Đang nối lại…' });
-      if (!peer.destroyed) peer.reconnect();
-    });
-    peer.on('error', (err) => {
-      if (this.destroyed || this.peer !== peer) return;
-      const type = (err as { type?: string }).type ?? '';
-      if (type === 'unavailable-id') {
-        this.onChange({ status: 'connecting', unavailable: true, error: 'Mã phòng đang bận, đang thử lại…' });
-        return;
-      }
-      if (type === 'network' || type === 'server-error' || type === 'socket-error' || type === 'socket-closed' || type === 'disconnected') {
-        this.onChange({ status: 'connecting', error: 'Đang nối lại máy chủ phòng…' });
-        return;
-      }
-      this.onChange({ status: 'error', error: 'Không mở được phòng. Hãy kiểm tra mạng rồi thử lại.' });
-    });
+    this.topics = roomTopics(code);
+    this.onChange({ status: 'connecting', debug: 'Đang mở kênh mạng…' });
+    const relay = new Relay(() => this.report());
+    this.relay = relay;
+    relay.start((topic, payload) => this.onWire(topic, payload));
+    relay.subscribe(this.topics.inn);
+    this.stall = window.setTimeout(() => {
+      if (this.destroyed || this.relay?.openIds.length) return;
+      this.onChange({
+        status: 'error',
+        error: 'Không mở được kênh mạng. Kiểm tra internet của máy chiếu rồi bấm thử lại.',
+        debug: 'Chưa nối HiveMQ hay EMQX',
+      });
+    }, 12000);
   }
 
   kick(playerId: string) {
     this.room.kick(playerId);
-    const conn = this.conns.get(playerId);
-    if (conn) {
-      this.send(conn, { t: 'kicked', reason: 'Bạn đã bị mời ra khỏi phòng.' });
-      this.conns.delete(playerId);
-      conn.close();
-    }
+    this.publish(this.topics?.you(playerId) ?? '', { t: 'kicked', reason: 'Bạn đã bị mời ra khỏi phòng.' });
     this.queue(true);
+  }
+
+  announceClose(reason: string) {
+    this.publish(this.topics?.all ?? '', { t: 'room-closed', reason });
   }
 
   broadcastNow() {
@@ -109,65 +95,55 @@ export class HostServer {
     this.destroyed = true;
     if (this.timer) window.clearTimeout(this.timer);
     if (this.heartbeat) window.clearInterval(this.heartbeat);
-    this.stopPeer();
+    if (this.stall) window.clearTimeout(this.stall);
+    this.destroyRelay();
   }
 
-  private stopPeer() {
+  private destroyRelay() {
     if (this.heartbeat) window.clearInterval(this.heartbeat);
     this.heartbeat = null;
-    const peer = this.peer;
-    this.peer = null;
-    this.conns.clear();
-    if (peer && !peer.destroyed) peer.destroy();
+    this.relay?.close();
+    this.relay = null;
   }
 
-  private armHeartbeat() {
-    if (this.heartbeat) window.clearInterval(this.heartbeat);
-    this.heartbeat = window.setInterval(() => this.queue(true), 2000);
+  private report() {
+    if (this.destroyed || !this.relay) return;
+    const open = this.relay.openIds;
+    if (open.length) {
+      if (this.stall) window.clearTimeout(this.stall);
+      this.stall = null;
+      if (!this.heartbeat) this.heartbeat = window.setInterval(() => this.queue(true), 2000);
+      this.onChange({ status: 'open', debug: 'Kênh ' + open.join(' + ') + ' · người chơi mạng khác vẫn vào được' });
+      this.queue(true);
+      return;
+    }
+    this.onChange({ status: 'connecting', debug: 'Đang nối lại kênh mạng…' });
   }
 
-  private bind(conn: DataConnection) {
-    let playerId: string | null = null;
-    conn.on('data', (raw) => {
-      const message = parseClient(raw);
-      if (!message) return;
-      if (playerId && message.playerId !== playerId) return;
-      if (message.t === 'join') {
-        const previous = this.conns.get(message.playerId);
-        if (previous && previous !== conn) previous.close();
-        playerId = message.playerId;
-        this.conns.set(playerId, conn);
-      }
-      const result = this.room.handleClient(message);
-      if (result.kick) {
-        this.send(conn, { t: 'kicked', reason: result.error ?? 'Bạn đã bị mời ra khỏi phòng.' });
-        if (playerId) this.conns.delete(playerId);
-        conn.close();
-        this.queue(true);
-        return;
-      }
-      if (result.error) this.send(conn, { t: 'error', message: result.error });
-      if (result.broadcast) this.queue(false);
-      else if (result.personal && playerId) this.sendPersonal(playerId);
-    });
-    conn.on('close', () => {
-      if (playerId && this.conns.get(playerId) === conn) {
-        this.conns.delete(playerId);
-        this.room.disconnect(playerId);
-        this.queue(true);
-      }
-    });
-    conn.on('error', () => {
-      /* close handler follows */
-    });
-  }
-
-  private sendPersonal(playerId: string) {
-    const conn = this.conns.get(playerId);
-    const you = this.room.youState(playerId);
-    if (!conn || !you) return;
-    const message: ServerMessage = { t: 'state', public: this.room.publicState(), you };
-    this.send(conn, message);
+  private onWire(topic: string, payload: string) {
+    if (!this.topics || topic !== this.topics.inn || payload.length > 20_000) return;
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(payload);
+    } catch {
+      return;
+    }
+    if (!isRecord(parsed) || typeof parsed.id !== 'string' || !isRecord(parsed.body)) return;
+    if (this.seen.includes(parsed.id)) return;
+    this.seen.push(parsed.id);
+    if (this.seen.length > 500) this.seen.splice(0, 100);
+    const message = parseClient(parsed.body);
+    if (!message) return;
+    const result = this.room.handleClient(message);
+    if (result.kick) {
+      this.publish(this.topics.you(message.playerId), { t: 'kicked', reason: result.error ?? 'Bạn đã bị mời ra khỏi phòng.' });
+      this.queue(true);
+      return;
+    }
+    if (result.error) {
+      this.publish(this.topics.you(message.playerId), { t: 'error', message: result.error });
+    }
+    if (result.broadcast || result.personal) this.queue(true);
   }
 
   private queue(immediate: boolean) {
@@ -185,20 +161,18 @@ export class HostServer {
   }
 
   private flush() {
+    if (!this.topics || !this.relay?.openIds.length) return;
     const pub = this.room.publicState();
-    for (const [playerId, conn] of this.conns) {
-      const you = this.room.youState(playerId);
+    this.publish(this.topics.all, { t: 'state', rev: pub.rev, public: pub });
+    for (const player of pub.players) {
+      const you = this.room.youState(player.id);
       if (!you) continue;
-      this.send(conn, { t: 'state', public: pub, you });
+      this.publish(this.topics.you(player.id), { t: 'you', rev: pub.rev, you });
     }
   }
 
-  private send(conn: DataConnection, message: ServerMessage) {
-    if (!conn.open) return;
-    try {
-      conn.send(JSON.parse(JSON.stringify(message)) as ServerMessage);
-    } catch {
-      /* connection is already closing */
-    }
+  private publish(topic: string, message: ServerMessage | { t: 'state'; rev: number; public: unknown } | { t: 'you'; rev: number; you: unknown }) {
+    if (!topic || !this.relay) return;
+    this.relay.publish(topic, JSON.stringify(message));
   }
 }

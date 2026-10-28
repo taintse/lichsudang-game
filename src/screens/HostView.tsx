@@ -22,6 +22,11 @@ interface Props {
   onKick: (playerId: string) => void;
   onSkip: () => void;
   onPerfect?: () => void;
+  onReplay: () => void;
+  onNewRoom: () => void;
+  onHome: () => void;
+  onFinish: () => void;
+  debug?: string;
 }
 
 function nextLabel(pub: PublicState): string {
@@ -37,9 +42,28 @@ function nextLabel(pub: PublicState): string {
   return 'Hiện đầy đủ';
 }
 
-export function HostView({ pub, link, qr, now, mode, notice, onNext, onPause, onResume, onKick, onSkip, onPerfect }: Props) {
+export function HostView({
+  pub,
+  link,
+  qr,
+  now,
+  mode,
+  notice,
+  onNext,
+  onPause,
+  onResume,
+  onKick,
+  onSkip,
+  onPerfect,
+  onReplay,
+  onNewRoom,
+  onHome,
+  onFinish,
+  debug,
+}: Props) {
   const theme = pub.phase === 'podium' ? 'podium' : (pub.stage?.theme ?? 'flame');
   const [confirm, setConfirm] = useState<string | null>(null);
+  const [ask, setAsk] = useState<'finish' | 'fresh' | 'leave' | null>(null);
   const [copied, setCopied] = useState(false);
   const [roster, setRoster] = useState(false);
   const connected = pub.players.filter((player) => player.connected).length;
@@ -139,7 +163,12 @@ export function HostView({ pub, link, qr, now, mode, notice, onNext, onPause, on
               >
                 {copied ? 'Đã chép liên kết' : 'Chép liên kết'}
               </button>
-              <p className="fine">Giữ tab này luôn mở. Máy chiếu chính là máy chủ của phòng.</p>
+              <p className="fine">Giữ tab này luôn mở. Máy chiếu chính là máy chủ của phòng. Điện thoại mạng khác vẫn vào được.</p>
+              {debug && (
+                <p className="fine" data-testid="net-debug">
+                  {debug}
+                </p>
+              )}
             </div>
             <div className="roster">
               <h2>
@@ -222,13 +251,13 @@ export function HostView({ pub, link, qr, now, mode, notice, onNext, onPause, on
         ))}
       </ol>
 
-      <footer className="host-dock">
+      <footer className={pub.phase === 'podium' ? 'host-dock end-mode' : 'host-dock'}>
         {pub.phase === 'play' && (
           <button type="button" className="btn ghost" onClick={pub.paused ? onResume : onPause}>
             {pub.paused ? 'Tiếp tục' : 'Tạm dừng'}
           </button>
         )}
-        {pub.phase !== 'lobby' && (
+        {pub.phase !== 'lobby' && pub.phase !== 'podium' && (
           <button type="button" className="btn ghost" onClick={() => setRoster((value) => !value)}>
             Người chơi
           </button>
@@ -238,11 +267,84 @@ export function HostView({ pub, link, qr, now, mode, notice, onNext, onPause, on
             Gợi ý đáp án đúng
           </button>
         )}
-        {pub.phase === 'podium' && step < 4 ? (
-          <button type="button" className="btn btn-red" data-testid="host-next" onClick={onSkip}>
+        {pub.phase !== 'lobby' && pub.phase !== 'podium' && ask !== 'finish' && (
+          <button type="button" className="btn ghost" data-testid="end-finish" onClick={() => setAsk('finish')}>
+            Kết thúc phòng
+          </button>
+        )}
+        {ask === 'finish' && (
+          <>
+            <button
+              type="button"
+              className="btn btn-red"
+              data-testid="end-finish-yes"
+              onClick={() => {
+                setAsk(null);
+                onFinish();
+              }}
+            >
+              Trao thưởng ngay
+            </button>
+            <button type="button" className="btn ghost" onClick={() => setAsk(null)}>
+              Huỷ
+            </button>
+          </>
+        )}
+        {pub.phase === 'podium' && step < 4 && (
+          <button type="button" className="btn ghost" data-testid="host-next" onClick={onSkip}>
             Hiện đầy đủ
           </button>
-        ) : pub.phase === 'podium' ? null : (
+        )}
+        {pub.phase === 'podium' && ask === null && (
+          <>
+            <button type="button" className="btn btn-red" data-testid="end-replay" onClick={onReplay}>
+              Chơi lại với người cũ
+            </button>
+            <button type="button" className="btn" data-testid="end-new" onClick={() => setAsk('fresh')}>
+              Tạo phòng mới
+            </button>
+            <button type="button" className="btn ghost" data-testid="end-home" onClick={() => setAsk('leave')}>
+              Về trang chủ
+            </button>
+          </>
+        )}
+        {pub.phase === 'podium' && ask === 'fresh' && (
+          <>
+            <button
+              type="button"
+              className="btn btn-red"
+              data-testid="end-new-yes"
+              onClick={() => {
+                setAsk(null);
+                onNewRoom();
+              }}
+            >
+              Mở phòng mới
+            </button>
+            <button type="button" className="btn ghost" onClick={() => setAsk(null)}>
+              Huỷ
+            </button>
+          </>
+        )}
+        {pub.phase === 'podium' && ask === 'leave' && (
+          <>
+            <button
+              type="button"
+              className="btn btn-red"
+              data-testid="end-home-yes"
+              onClick={() => {
+                setAsk(null);
+                onHome();
+              }}
+            >
+              Đóng phòng và về trang chủ
+            </button>
+            <button type="button" className="btn ghost" onClick={() => setAsk(null)}>
+              Huỷ
+            </button>
+          </>
+        )}
+        {pub.phase !== 'podium' && (
           <button type="button" className="btn btn-red" data-testid="host-next" onClick={onNext}>
             {nextLabel(pub)}
           </button>

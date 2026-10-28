@@ -53,6 +53,8 @@ export interface HostState {
   bannedNames: string[];
   live: LiveRound | null;
   reveal: RevealPublic | null;
+  rev: number;
+  restarted: boolean;
 }
 
 export interface ClientResult {
@@ -122,7 +124,11 @@ export class GameRoom {
       bannedNames: [],
       live: null,
       reveal: null,
+      rev: 0,
+      restarted: false,
     };
+    this.state.rev = this.state.rev || 0;
+    this.state.restarted = !!this.state.restarted;
   }
 
   subscribe(fn: () => void): () => void {
@@ -139,6 +145,7 @@ export class GameRoom {
   }
 
   private emit() {
+    this.state.rev = (this.state.rev || 0) + 1;
     this.listeners.forEach((fn) => fn());
   }
 
@@ -247,7 +254,67 @@ export class GameRoom {
     if (this.state.phase !== 'lobby') return;
     this.state.challengePos = 0;
     this.state.showCapitalNote = false;
+    this.state.restarted = false;
     this.state.phase = 'intro';
+    this.emit();
+  }
+
+  /** End the current round and open the podium with the scores people already have. */
+  finishNow() {
+    if (this.state.phase === 'podium' || this.state.phase === 'lobby') return;
+    if (this.state.phase === 'play') this.finalize();
+    this.state.phase = 'podium';
+    this.state.live = null;
+    this.state.paused = false;
+    this.state.deadline = null;
+    this.state.pausedRemainingMs = null;
+    this.state.ceremonyStartedAt = this.clock();
+    this.emit();
+  }
+
+  /** Same room, same players, scores back to zero, lobby. */
+  replay() {
+    if (this.state.phase !== 'podium') return;
+    for (const player of this.active()) {
+      player.score = 0;
+      player.combo = 0;
+      player.gotCapital = false;
+      player.prevRank = player.rank;
+      resetRound(player);
+    }
+    this.state.phase = 'lobby';
+    this.state.challengePos = -1;
+    this.state.ceremonyStartedAt = null;
+    this.state.capitalGranted = false;
+    this.state.showCapitalNote = false;
+    this.state.paused = false;
+    this.state.deadline = null;
+    this.state.challengeStartedAt = null;
+    this.state.pausedRemainingMs = null;
+    this.state.live = null;
+    this.state.reveal = null;
+    this.state.restarted = true;
+    this.recomputeRanks();
+    this.emit();
+  }
+
+  /** Drop everyone. Used when solo practice starts over. */
+  wipe() {
+    this.state.players = [];
+    this.state.bannedIds = [];
+    this.state.bannedNames = [];
+    this.state.phase = 'lobby';
+    this.state.challengePos = -1;
+    this.state.ceremonyStartedAt = null;
+    this.state.capitalGranted = false;
+    this.state.showCapitalNote = false;
+    this.state.paused = false;
+    this.state.deadline = null;
+    this.state.challengeStartedAt = null;
+    this.state.pausedRemainingMs = null;
+    this.state.live = null;
+    this.state.reveal = null;
+    this.state.restarted = false;
     this.emit();
   }
 
@@ -551,6 +618,8 @@ export class GameRoom {
       reveal: this.state.phase === 'reveal' || this.state.phase === 'board' ? this.state.reveal : null,
       players,
       ceremonyStartedAt: this.state.ceremonyStartedAt,
+      rev: this.state.rev || 0,
+      restarted: !!this.state.restarted,
       capitalNote: this.state.showCapitalNote && this.state.phase === 'intro',
       stageBreakNext:
         this.state.phase === 'board' &&

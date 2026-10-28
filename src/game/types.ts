@@ -96,6 +96,10 @@ export interface PublicState {
   reveal: RevealPublic | null;
   players: PublicPlayer[];
   ceremonyStartedAt: number | null;
+  /** Increments on every authoritative change so late broker copies are ignored. */
+  rev: number;
+  /** Host reset scores and returned this room to the lobby. */
+  restarted: boolean;
   capitalNote: boolean;
   /** On the leaderboard, the next host action opens a new stage. */
   stageBreakNext: boolean;
@@ -132,7 +136,8 @@ export type ClientMessage =
 export type ServerMessage =
   | { t: 'state'; public: PublicState; you: YouState }
   | { t: 'kicked'; reason: string }
-  | { t: 'error'; message: string };
+  | { t: 'error'; message: string }
+  | { t: 'room-closed'; reason: string };
 
 export const WAGER_PCTS = [0, 10, 25, 50, 100] as const;
 export type WagerPct = (typeof WAGER_PCTS)[number];

@@ -72,8 +72,12 @@ export function PlayerView({ pub, you, now, onTimeline, onMap, onClue, onMatch, 
       <main className="player-main">
         {pub.phase === 'lobby' && (
           <section className="wait-card">
-            <h1>Đã vào lớp</h1>
-            <p>Giữ máy này. Khi giảng viên bấm bắt đầu, câu hỏi sẽ hiện ngay tại đây.</p>
+            <h1>{pub.restarted ? 'Ván mới' : 'Đã vào lớp'}</h1>
+            <p>
+              {pub.restarted
+                ? 'Điểm đã về không. Giữ máy này, giảng viên sắp bắt đầu lại với đúng những người trong phòng.'
+                : 'Giữ máy này. Khi giảng viên bấm bắt đầu, câu hỏi sẽ hiện ngay tại đây.'}
+            </p>
             <p className="count">{pub.players.length} người trong phòng</p>
             <ul className="name-list">
               {pub.players.map((player) => (
@@ -132,7 +136,12 @@ export function PlayerView({ pub, you, now, onTimeline, onMap, onClue, onMatch, 
             <Leaderboard players={pub.players} highlightId={you.playerId} compact />
           </section>
         )}
-        {pub.phase === 'podium' && <Podium players={pub.players} step={ceremonyStep(pub.ceremonyStartedAt, now)} youId={you.playerId} />}
+        {pub.phase === 'podium' && (
+          <>
+            <Podium players={pub.players} step={ceremonyStep(pub.ceremonyStartedAt, now)} youId={you.playerId} />
+            <p className="wait-line">Giữ máy này. Khi giảng viên chơi lại, ván mới hiện ngay tại đây.</p>
+          </>
+        )}
       </main>
       <ol className="rail slim-rail">
         {STAGES.map((stage) => (

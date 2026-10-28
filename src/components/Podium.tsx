@@ -1,5 +1,4 @@
 import { useEffect, useRef } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
 import { Avatar } from './art';
 import { formatPoints } from '../game/text';
 import type { PublicPlayer } from '../game/types';
@@ -56,40 +55,39 @@ function Burst({ token }: { token: number }) {
 export function Podium({ players, step, youId }: { players: PublicPlayer[]; step: number; youId?: string }) {
   const ranked = players.slice().sort((a, b) => a.rank - b.rank);
   const slots = [
-    { place: 2, player: ranked[1], show: step >= 2 },
-    { place: 1, player: ranked[0], show: step >= 3 },
-    { place: 3, player: ranked[2], show: step >= 1 },
+    { place: 2, player: ranked[1] },
+    { place: 1, player: ranked[0] },
+    { place: 3, player: ranked[2] },
   ];
   return (
     <div className="podium-wrap" data-testid="podium">
       {step >= 1 && <Burst token={step} />}
       <p className="eyebrow">Lễ trao thưởng</p>
       <h2>Bục vinh quang</h2>
-      {step === 0 && <p className="wait-line">Xin giữ yên lặng một nhịp…</p>}
+      {ranked.length === 0 && <p className="wait-line">Chưa có người chơi trên bục.</p>}
       <div className="podium">
         {slots.map((slot) => (
-          <div key={slot.place} className={`pedestal p${slot.place}`}>
-            <AnimatePresence>
-              {slot.show && slot.player && (
-                <motion.div
-                  className="winner"
-                  initial={{ y: 40, opacity: 0, scale: 0.9 }}
-                  animate={{ y: 0, opacity: 1, scale: 1 }}
-                  transition={{ type: 'spring', stiffness: 220, damping: 18 }}
-                >
-                  <Avatar id={slot.player.avatar} size={slot.place === 1 ? 84 : 64} />
-                  <strong>{slot.player.name}</strong>
+          <div key={slot.place} className={`pedestal p${slot.place}`} data-testid={`podium-slot-${slot.place}`}>
+            <div className="winner">
+              {slot.player ? (
+                <>
+                  <Avatar id={slot.player.avatar} size={slot.place === 1 ? 72 : 56} />
+                  <strong data-testid={`podium-name-${slot.place}`}>{slot.player.name}</strong>
                   <em>{formatPoints(slot.player.score)}</em>
-                </motion.div>
+                </>
+              ) : (
+                <span className="empty-slot" data-testid={`podium-empty-${slot.place}`}>
+                  Trống
+                </span>
               )}
-            </AnimatePresence>
+            </div>
             <div className="block">
               <span>{slot.place}</span>
             </div>
           </div>
         ))}
       </div>
-      {youId && step >= 3 && <YouLine players={ranked} youId={youId} />}
+      {youId && <YouLine players={ranked} youId={youId} />}
       {step >= 4 && (
         <ol className="final-list">
           {ranked.map((player) => (

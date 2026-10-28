@@ -2,7 +2,7 @@
 
 Trò chơi trên lớp cho học phần **Lịch sử Đảng Cộng sản Việt Nam**. Cả lớp chơi trên điện thoại và laptop của mình. Máy chiếu là máy chủ: hiện mã phòng, mã QR, bảng xếp hạng và lễ trao thưởng. Ba người dẫn đầu đứng trên bục.
 
-Không cần tài khoản. Không có máy chủ trả phí. Tab máy chiếu giữ phòng bằng kết nối trực tiếp giữa các trình duyệt (PeerJS / WebRTC).
+Không cần tài khoản. Không có máy chủ trả phí. Tab máy chiếu giữ phòng và phát trạng thái qua kênh MQTT công khai (WebSocket bảo mật, cổng 443) nên điện thoại ở mạng khác, kể cả 4G, vẫn vào được.
 
 Địa chỉ sau khi triển khai: [https://taintse.github.io/lichsudang-game/](https://taintse.github.io/lichsudang-game/)
 
@@ -12,12 +12,12 @@ Không cần tài khoản. Không có máy chủ trả phí. Tab máy chiếu gi
 2. Chiếu mã phòng, mã QR và đường dẫn. Sinh viên quét mã, hoặc mở **Vào phòng** rồi gõ mã, tên và một biểu tượng. Không cần đăng ký.
 3. Tên không phù hợp: bấm dấu × cạnh tên, rồi **Mời ra**. Người đó không vào lại được bằng cùng tên trong phòng này.
 4. Khi lớp đã vào, bấm **Bắt đầu**. Mỗi chặng có một kiểu chơi khác nhau. Sau mỗi câu, bấm **Hiện đáp án** để đọc lời giải, rồi **Bảng xếp hạng**.
-5. Phím **N** (hoặc mũi tên phải) sang bước tiếp theo. Phím **cách** tạm dừng / tiếp tục khi đang chơi.
-6. Hết năm câu của chặng Đổi mới, máy chiếu mở lễ trao thưởng: hạng ba, hạng nhì, hạng nhất, rồi cả bảng. Mỗi điện thoại hiện hạng của chính người đó.
+5. Phím **N** (hoặc mũi tên phải) sang bước tiếp theo. Phím **cách** tạm dừng / tiếp tục khi đang chơi. **Kết thúc phòng** trao thưởng sớm với điểm hiện tại, có bước xác nhận.
+6. Hết năm câu của chặng Đổi mới, máy chiếu mở lễ trao thưởng: tên, biểu tượng và điểm của hạng nhất, nhì, ba hiện ngay trên bục. Sau đó chọn **Chơi lại với người cũ** (cùng phòng, điểm về không, điện thoại tự về màn chờ), **Tạo phòng mới** (mã và QR mới, điện thoại được báo nhập mã mới), hoặc **Về trang chủ**.
 
-**Tab máy chiếu phải mở suốt buổi.** Đóng tab, mất mạng hoặc tải lại quá lâu thì phòng mất kết nối. Nếu vừa tải lại tab máy chiếu, phòng cố lấy lại mã cũ trong khoảng ba giờ (cùng trình duyệt, cùng tab phiên). Sinh viên tải lại trang thì vào lại bằng tên cũ và giữ điểm, miễn là tab máy chiếu vẫn sống.
+**Tab máy chiếu phải mở suốt buổi.** Đóng tab là hết phòng. Nếu vừa tải lại tab máy chiếu, phòng cố lấy lại mã cũ trong khoảng ba giờ (cùng trình duyệt, cùng tab phiên). Sinh viên tải lại trang thì vào lại bằng tên cũ và giữ điểm, miễn là tab máy chiếu vẫn sống. Chơi lại hoặc tạo phòng mới thì điểm cũ không bị giữ lại.
 
-Nên dùng Wi-Fi ổn định. Mạng trường chặn kết nối trực tiếp giữa các máy (WebRTC / UDP) thì điện thoại không vào được phòng. Khi đó thử phát Wi-Fi từ laptop máy chiếu, hoặc một mạng không chặn UDP.
+Người chơi không cần cùng mạng Wi-Fi với máy chiếu. Máy chiếu và điện thoại gặp nhau qua kênh công khai HiveMQ và EMQX (WebSocket cổng 443). Nếu sau khoảng 12 giây vẫn chưa vào, màn hình hiện lỗi và nút **Thử lại**: kiểm tra mã phòng, tab máy chiếu đang mở, và internet của điện thoại.
 
 Một phòng khoảng 40–60 người. Vượt quá mức đó, người vào sau được báo phòng đã đầy.
 
@@ -37,7 +37,7 @@ Có **27 câu**, khoảng 15–20 phút nếu giảng viên đọc ngắn phần
 
 ## Chơi thử một mình
 
-Trang chủ → **Chơi thử**. Một bên là máy chiếu, một bên là điện thoại. Trên màn hẹp, dùng hai tab «Máy chiếu» và «Điện thoại». Nút **Gợi ý đáp án đúng** chỉ có ở chế độ này, để xem đáp án khi soạn câu.
+Trang chủ → **Chơi thử**. Một bên là máy chiếu, một bên là điện thoại. Trên màn hẹp, dùng hai tab «Máy chiếu» và «Điện thoại». Nút **Gợi ý đáp án đúng** chỉ có ở chế độ này. Hết ván có thể chơi lại, tạo phiên mới, hoặc về trang chủ.
 
 ## Sửa câu hỏi
 
@@ -76,7 +76,7 @@ Repo này đã chọn **Settings → Pages → Build and deployment → Source =
 ## Giới hạn
 
 - Tab máy chiếu là máy chủ. Tắt tab là hết phòng.
-- Kết nối đi qua broker công khai `0.peerjs.com` và WebRTC. Không có máy chuyển tiếp (TURN) miễn phí, không cần tài khoản. Mạng chặn UDP thì người chơi không nối được.
+- Phòng đi qua broker MQTT công khai (HiveMQ, EMQX), không mật khẩu. Không dùng cho dữ liệu riêng tư. Nếu cả hai broker cùng tắt, phòng không mở được.
 - Khoảng 50–60 người là mức thực tế của một tab trình duyệt.
 - Người quyết tâm có thể tải file JavaScript của trang máy chiếu để xem đáp án. Điểm vẫn do máy chiếu chấm theo thời điểm nhận câu trả lời, không tin số liệu máy người chơi tự khai.
 - Sơ đồ Việt Nam là hình minh họa, không phải bản đồ hành chính. Đất liền, đảo gần bờ, Quần đảo Hoàng Sa và Quần đảo Trường Sa cùng một màu. Tên biển là Biển Đông.
