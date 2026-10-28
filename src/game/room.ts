@@ -28,13 +28,14 @@ export interface Player {
   mistakeSeq: number;
   solved: boolean;
   wrongGuesses: number;
-  mapPin: { x: number; y: number } | null;
+  mapChoice: string | null;
   lastResult: YouState['lastResult'];
 }
 
 export interface LiveRound {
   challenge: PublicChallenge;
   matchKey: Record<string, string> | null;
+  answerId: string | null;
 }
 
 export interface HostState {
@@ -84,7 +85,7 @@ function blankPlayer(id: string, name: string, avatar: string, joinedAt: number)
     mistakeSeq: 0,
     solved: false,
     wrongGuesses: 0,
-    mapPin: null,
+    mapChoice: null,
     lastResult: null,
   };
 }
@@ -97,7 +98,7 @@ function resetRound(player: Player) {
   player.mistakeSeq = 0;
   player.solved = false;
   player.wrongGuesses = 0;
-  player.mapPin = null;
+  player.mapChoice = null;
   player.lastResult = null;
 }
 
@@ -223,9 +224,11 @@ export class GameRoom {
     const startedAt = this.state.challengeStartedAt;
     const timeLimitMs = challenge.timeLimit * 1000;
     this.snapshotRanks();
-    const guesses: { x: number; y: number }[] = [];
+    const mapCounts: Record<string, number> = {};
     for (const player of this.active()) {
-      if (player.pending?.kind === 'map') guesses.push({ x: player.pending.x, y: player.pending.y });
+      if (player.pending?.kind === 'map' && player.pending.choice) {
+        mapCounts[player.pending.choice] = (mapCounts[player.pending.choice] ?? 0) + 1;
+      }
       const late = !player.pending && player.joinedAt > startedAt + 800;
       if (late) {
         player.lastResult = { delta: 0, correct: false, note: 'Vào giữa chừng' };
@@ -243,7 +246,7 @@ export class GameRoom {
       player.submitted = true;
     }
     this.recomputeRanks();
-    this.state.reveal = buildReveal(challenge, guesses);
+    this.state.reveal = buildReveal(challenge, mapCounts, live.matchKey);
     this.state.phase = 'reveal';
     this.state.paused = false;
     this.state.deadline = null;
@@ -487,13 +490,13 @@ export class GameRoom {
       return { broadcast: true, personal: true, kick: false };
     }
 
-    if (message.t === 'map' && challenge.t === 'map') {
+    if (message.t === 'map' && challenge.t === 'map' && live.challenge.t === 'map') {
       if (player.submitted) return { broadcast: false, personal: true, kick: false };
-      if (!Number.isFinite(message.x) || !Number.isFinite(message.y)) {
-        return { broadcast: false, personal: true, kick: false, error: 'Vị trí không hợp lệ.' };
+      if (!live.challenge.markers.some((marker) => marker.id === message.choice)) {
+        return { broadcast: false, personal: true, kick: false, error: 'Hãy chọn một dấu trên sơ đồ.' };
       }
-      player.pending = { kind: 'map', x: message.x, y: message.y, at: now };
-      player.mapPin = { x: message.x, y: message.y };
+      player.pending = { kind: 'map', choice: message.choice, at: now };
+      player.mapChoice = message.choice;
       player.submitted = true;
       this.emit();
       return { broadcast: true, personal: true, kick: false };
@@ -645,7 +648,7 @@ export class GameRoom {
       mistakeSeq: player.mistakeSeq,
       solved: player.solved,
       wrongGuesses: player.wrongGuesses,
-      mapPin: player.mapPin ? { ...player.mapPin } : null,
+      mapChoice: player.mapChoice ?? null,
       lastResult: player.lastResult ? { ...player.lastResult } : null,
       kicked: player.kicked,
     };
@@ -653,7 +656,9 @@ export class GameRoom {
 
   debugKey(): DebugKey | null {
     if (this.state.phase === 'lobby' || this.state.phase === 'podium') return null;
-    return debugKey(this.state.challengePos, this.state.live?.matchKey ?? null);
+    const key = debugKey(this.state.challengePos, this.state.live?.matchKey ?? null);
+    if (key?.t === 'map' && this.state.live?.answerId) return { ...key, optionId: this.state.live.answerId };
+    return key;
   }
 }
 

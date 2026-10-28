@@ -30,13 +30,9 @@ function answer(room: GameRoom, playerId: string, mode: 'perfect' | 'wrong') {
   if (key.t === 'timeline') {
     const order = mode === 'perfect' ? key.order! : [...key.order!].reverse();
     room.handleClient({ t: 'timeline', playerId, order });
-  } else if (key.t === 'map') {
-    room.handleClient({
-      t: 'map',
-      playerId,
-      x: mode === 'perfect' ? key.x! : 10,
-      y: mode === 'perfect' ? key.y! : 10,
-    });
+  } else if (key.t === 'map' && challenge.t === 'map') {
+    const wrong = challenge.markers.find((marker) => marker.id !== key.optionId)?.id ?? 'sai';
+    room.handleClient({ t: 'map', playerId, choice: mode === 'perfect' ? key.optionId! : wrong });
   } else if (key.t === 'clues') {
     room.handleClient({ t: 'clue', playerId, text: mode === 'perfect' ? key.answer! : 'một đáp án sai rõ ràng' });
   } else if (key.t === 'match' && challenge.t === 'match') {

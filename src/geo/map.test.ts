@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { PLACES } from './places';
+import { CHALLENGES } from '../data/questions';
+import { placePoint, PLACES } from './places';
 import { ISLAND_LABELS, MAP_LAYOUT, SEA_LABELS, project, unproject } from './vietnam';
 
 describe('sơ đồ Biển Đông', () => {
@@ -29,6 +30,23 @@ describe('sơ đồ Biển Đông', () => {
       expect(label.x).toBeLessThan(MAP_LAYOUT.viewW - 80);
       expect(label.y).toBeGreaterThan(40);
       expect(label.y).toBeLessThan(MAP_LAYOUT.viewH - 48);
+    }
+  });
+
+  it('mỗi câu bản đồ có bốn mốc đủ xa để chạm', () => {
+    const maps = CHALLENGES.filter((challenge) => challenge.t === 'map');
+    expect(maps.length).toBeGreaterThan(0);
+    for (const challenge of maps) {
+      expect(challenge.options).toHaveLength(4);
+      expect(new Set(challenge.options.map((option) => option.placeId)).size).toBe(4);
+      expect(challenge.options.some((option) => option.id === challenge.correctId)).toBe(true);
+      const points = challenge.options.map((option) => placePoint(option.placeId));
+      for (let i = 0; i < points.length; i++) {
+        for (let j = i + 1; j < points.length; j++) {
+          const gap = Math.hypot(points[i].x - points[j].x, points[i].y - points[j].y);
+          expect(gap).toBeGreaterThan(100);
+        }
+      }
     }
   });
 

@@ -1,6 +1,4 @@
 import type { Challenge } from '../data/questions';
-import { haversineKm, unproject } from '../geo/vietnam';
-import { PLACES } from '../geo/places';
 import { clamp } from './text';
 
 export interface TimelinePending {
@@ -10,8 +8,7 @@ export interface TimelinePending {
 }
 export interface MapPending {
   kind: 'map';
-  x: number;
-  y: number;
+  choice: string;
   at: number;
 }
 export interface CluePending {
@@ -109,21 +106,17 @@ export function gradeAnswer(
   }
 
   if (challenge.t === 'map') {
-    if (!pending || pending.kind !== 'map' || !Number.isFinite(pending.x) || !Number.isFinite(pending.y)) {
-      return { perfect: false, base: 0, wagerDelta: 0, note: 'Chưa ghim' };
+    if (!pending || pending.kind !== 'map' || !pending.choice) {
+      return { perfect: false, base: 0, wagerDelta: 0, note: 'Chưa chọn' };
     }
-    const guess = unproject(pending.x, pending.y);
-    const place = PLACES[challenge.placeId];
-    const km = haversineKm(guess, place);
-    const band = mapBand(km);
-    const speed = band.perfect ? Math.round(350 * remainRatio(pending.at - startedAt, timeLimitMs)) : 0;
-    const rounded = Math.max(0, Math.round(km));
+    const optionId = matchKey?.[pending.choice];
+    const correct = optionId === challenge.correctId;
+    const speed = correct ? Math.round(400 * remainRatio(pending.at - startedAt, timeLimitMs)) : 0;
     return {
-      perfect: band.perfect,
-      base: band.base + speed,
+      perfect: correct,
+      base: correct ? 1000 + speed : 0,
       wagerDelta: 0,
-      note: `Cách ${place.name} khoảng ${rounded} km`,
-      km,
+      note: correct ? 'Đúng địa điểm' : 'Sai địa điểm',
     };
   }
 

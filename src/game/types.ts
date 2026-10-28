@@ -27,6 +27,7 @@ export interface PublicMap {
   prompt: string;
   timeLimit: number;
   howTo: string;
+  markers: { id: string; x: number; y: number }[];
 }
 
 export interface PublicClues {
@@ -65,7 +66,7 @@ export interface RevealPublic {
   headline: string;
   explanation: string;
   timeline?: { text: string; year: string }[];
-  map?: { x: number; y: number; label: string; guesses: { x: number; y: number }[] };
+  map?: { choices: { id: string; x: number; y: number; label: string; count: number; correct: boolean }[] };
   pairs?: { left: string; right: string }[];
 }
 
@@ -120,7 +121,7 @@ export interface YouState {
   mistakeSeq: number;
   solved: boolean;
   wrongGuesses: number;
-  mapPin: { x: number; y: number } | null;
+  mapChoice: string | null;
   lastResult: null | { delta: number; correct: boolean; note: string };
   kicked: boolean;
 }
@@ -128,7 +129,7 @@ export interface YouState {
 export type ClientMessage =
   | { t: 'join'; playerId: string; name: string; avatar: string }
   | { t: 'timeline'; playerId: string; order: string[] }
-  | { t: 'map'; playerId: string; x: number; y: number }
+  | { t: 'map'; playerId: string; choice: string }
   | { t: 'clue'; playerId: string; text: string }
   | { t: 'match'; playerId: string; leftId: string; rightId: string }
   | { t: 'bet'; playerId: string; wagerPct: number; optionId: string };

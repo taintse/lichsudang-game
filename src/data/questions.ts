@@ -7,8 +7,9 @@
  * Các kiểu (`t`):
  * - timeline: `items` xếp theo thời gian sớm → muộn. `sort` là số để so thứ tự
  *   (ví dụ 19450819 = 19/8/1945). Người chơi không thấy `sort` hay `year`.
- * - map: `placeId` là một địa danh trong `src/geo/places.ts`
- *   (pacBo, tanTrao, baDinh, hue, saiGon, dienBien).
+ * - map: đúng 4 `options`. Mỗi option có `id` (tự đặt) và `placeId`
+ *   (một địa danh trong `src/geo/places.ts`). `correctId` trùng `id` của
+ *   phương án đúng. Bốn mốc nên cách xa nhau trên sơ đồ để dễ chạm.
  * - clues: `aliases` là các cách gõ được tính đúng (có hoặc không dấu).
  *   `options` là 4 phương án. Đáp án đúng phải khớp một alias.
  * - match: `pairs` là các cặp trái ↔ phải. Không cần đánh dấu đáp án riêng.
@@ -43,13 +44,22 @@ export interface TimelineChallenge {
   items: TimelineItem[];
 }
 
+export interface MapOption {
+  /** Id ổn định để giảng viên sửa. Người chơi không thấy id này. */
+  id: string;
+  placeId: PlaceId;
+}
+
 export interface MapChallenge {
   t: 'map';
   id: string;
   stageId: string;
   prompt: string;
   timeLimit: number;
-  placeId: PlaceId;
+  /** Đúng 4 địa điểm, một đúng và ba nhiễu. */
+  options: MapOption[];
+  /** Trùng `id` của phương án đúng trong `options`. */
+  correctId: string;
   headline: string;
   explanation: string;
 }
@@ -183,9 +193,15 @@ export const CHALLENGES: Challenge[] = [
     t: 'map',
     id: 'map-pacbo',
     stageId: 'autumn',
-    prompt: 'Ghim nơi Nguyễn Ái Quốc về nước ngày 28/1/1941 và chủ trì Hội nghị Trung ương 8.',
+    prompt: 'Chọn nơi Nguyễn Ái Quốc về nước ngày 28/1/1941 và chủ trì Hội nghị Trung ương 8.',
     timeLimit: 22,
-    placeId: 'pacBo',
+    options: [
+      { id: 'pacBo', placeId: 'pacBo' },
+      { id: 'dienBien', placeId: 'dienBien' },
+      { id: 'hue', placeId: 'hue' },
+      { id: 'saiGon', placeId: 'saiGon' },
+    ],
+    correctId: 'pacBo',
     headline: 'Pác Bó, Cao Bằng',
     explanation:
       'Pác Bó thuộc Hà Quảng, Cao Bằng, sát biên giới. Đây là nơi Nguyễn Ái Quốc ở và làm việc sau khi về nước, và là nơi họp Hội nghị Trung ương 8 (tháng 5/1941) quyết định thành lập Mặt trận Việt Minh.',
@@ -194,9 +210,15 @@ export const CHALLENGES: Challenge[] = [
     t: 'map',
     id: 'map-tantrao',
     stageId: 'autumn',
-    prompt: 'Ghim thủ đô Khu giải phóng — nơi họp Hội nghị toàn quốc của Đảng và Đại hội Quốc dân tháng 8/1945.',
+    prompt: 'Chọn thủ đô Khu giải phóng — nơi họp Hội nghị toàn quốc của Đảng và Đại hội Quốc dân tháng 8/1945.',
     timeLimit: 22,
-    placeId: 'tanTrao',
+    options: [
+      { id: 'tanTrao', placeId: 'tanTrao' },
+      { id: 'vinh', placeId: 'vinh' },
+      { id: 'quyNhon', placeId: 'quyNhon' },
+      { id: 'saiGon', placeId: 'saiGon' },
+    ],
+    correctId: 'tanTrao',
     headline: 'Tân Trào, Tuyên Quang',
     explanation:
       'Tân Trào (Sơn Dương, Tuyên Quang) là trung tâm Khu giải phóng Việt Bắc, được thành lập ngày 4/6/1945. Giữa tháng 8/1945, Hội nghị toàn quốc của Đảng quyết định Tổng khởi nghĩa; Đại hội Quốc dân lập Ủy ban Dân tộc giải phóng do Hồ Chí Minh làm Chủ tịch.',
@@ -205,9 +227,15 @@ export const CHALLENGES: Challenge[] = [
     t: 'map',
     id: 'map-badinh',
     stageId: 'autumn',
-    prompt: 'Ghim nơi Chủ tịch Hồ Chí Minh đọc Tuyên ngôn Độc lập, khai sinh nước Việt Nam Dân chủ Cộng hòa.',
+    prompt: 'Chọn nơi Chủ tịch Hồ Chí Minh đọc Tuyên ngôn Độc lập, khai sinh nước Việt Nam Dân chủ Cộng hòa.',
     timeLimit: 20,
-    placeId: 'baDinh',
+    options: [
+      { id: 'baDinh', placeId: 'baDinh' },
+      { id: 'hue', placeId: 'hue' },
+      { id: 'quyNhon', placeId: 'quyNhon' },
+      { id: 'saiGon', placeId: 'saiGon' },
+    ],
+    correctId: 'baDinh',
     headline: 'Quảng trường Ba Đình, Hà Nội',
     explanation:
       'Chiều 2/9/1945, tại Quảng trường Ba Đình (Hà Nội), Hồ Chí Minh đọc Tuyên ngôn Độc lập trước đồng bào. Nước Việt Nam Dân chủ Cộng hòa ra đời.',
@@ -216,9 +244,15 @@ export const CHALLENGES: Challenge[] = [
     t: 'map',
     id: 'map-hue',
     stageId: 'autumn',
-    prompt: 'Ghim thành phố miền Trung giành chính quyền ngày 23/8/1945.',
+    prompt: 'Chọn thành phố miền Trung giành chính quyền ngày 23/8/1945.',
     timeLimit: 20,
-    placeId: 'hue',
+    options: [
+      { id: 'hue', placeId: 'hue' },
+      { id: 'pacBo', placeId: 'pacBo' },
+      { id: 'dienBien', placeId: 'dienBien' },
+      { id: 'saiGon', placeId: 'saiGon' },
+    ],
+    correctId: 'hue',
     headline: 'Huế',
     explanation:
       'Ngày 23/8/1945, khởi nghĩa thắng lợi ở Huế. Cùng Hà Nội (19/8) và Sài Gòn (25/8), Huế là một trong ba đô thị then chốt của Cách mạng tháng Tám.',
@@ -227,9 +261,15 @@ export const CHALLENGES: Challenge[] = [
     t: 'map',
     id: 'map-saigon',
     stageId: 'autumn',
-    prompt: 'Ghim thành phố miền Nam giành chính quyền ngày 25/8/1945.',
+    prompt: 'Chọn thành phố miền Nam giành chính quyền ngày 25/8/1945.',
     timeLimit: 20,
-    placeId: 'saiGon',
+    options: [
+      { id: 'saiGon', placeId: 'saiGon' },
+      { id: 'pacBo', placeId: 'pacBo' },
+      { id: 'dienBien', placeId: 'dienBien' },
+      { id: 'vinh', placeId: 'vinh' },
+    ],
+    correctId: 'saiGon',
     headline: 'Sài Gòn',
     explanation:
       'Ngày 25/8/1945, khởi nghĩa thắng lợi ở Sài Gòn. Chính quyền ở đô thị lớn nhất miền Nam về tay nhân dân, hoàn thành những ngày Tổng khởi nghĩa ở ba miền.',
@@ -238,9 +278,15 @@ export const CHALLENGES: Challenge[] = [
     t: 'map',
     id: 'map-dienbien',
     stageId: 'autumn',
-    prompt: 'Ghim lòng chảo Tây Bắc, nơi chiến dịch từ 13/3 đến 7/5/1954 làm nên bước ngoặt kết thúc chiến tranh với Pháp.',
+    prompt: 'Chọn lòng chảo Tây Bắc, nơi chiến dịch từ 13/3 đến 7/5/1954 làm nên bước ngoặt kết thúc chiến tranh với Pháp.',
     timeLimit: 22,
-    placeId: 'dienBien',
+    options: [
+      { id: 'dienBien', placeId: 'dienBien' },
+      { id: 'pacBo', placeId: 'pacBo' },
+      { id: 'hue', placeId: 'hue' },
+      { id: 'saiGon', placeId: 'saiGon' },
+    ],
+    correctId: 'dienBien',
     headline: 'Điện Biên Phủ',
     explanation:
       'Điện Biên Phủ là tập đoàn cứ điểm mạnh của Pháp ở lòng chảo miền Tây Bắc. Chiến dịch kéo dài 56 ngày đêm. Ngày 7/5/1954, quân ta làm chủ tập đoàn cứ điểm. Thắng lợi này mở đường tới Hiệp định Giơ-ne-vơ.',

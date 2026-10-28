@@ -27,8 +27,8 @@ function parseClient(raw: unknown): ClientMessage | null {
     const order = raw.order.filter((id): id is string => typeof id === 'string').slice(0, 8).map((id) => id.slice(0, 16));
     return { t: 'timeline', playerId, order };
   }
-  if (raw.t === 'map' && typeof raw.x === 'number' && typeof raw.y === 'number' && Number.isFinite(raw.x) && Number.isFinite(raw.y)) {
-    return { t: 'map', playerId, x: raw.x, y: raw.y };
+  if (raw.t === 'map' && typeof raw.choice === 'string') {
+    return { t: 'map', playerId, choice: raw.choice.slice(0, 24) };
   }
   if (raw.t === 'clue' && typeof raw.text === 'string') {
     return { t: 'clue', playerId, text: raw.text.slice(0, 80) };
