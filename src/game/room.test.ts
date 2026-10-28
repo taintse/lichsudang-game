@@ -165,4 +165,23 @@ describe('phòng chơi', () => {
     expect(room.youState('playerC1')!.score).toBe(800);
     expect(room.youState('playerA1')!.score).toBe(before);
   });
+
+  it('kết thúc phòng rồi chơi lại giữ người và xoá điểm', () => {
+    const { room } = setup();
+    room.next();
+    const key = room.debugKey();
+    room.handleClient({ t: 'timeline', playerId: 'playerA1', order: key!.order! });
+    room.finishNow();
+    expect(room.getState().phase).toBe('podium');
+    expect(room.youState('playerA1')!.score).toBeGreaterThan(0);
+    const rev = room.publicState().rev;
+    room.replay();
+    expect(room.getState().phase).toBe('lobby');
+    expect(room.publicState().restarted).toBe(true);
+    expect(room.youState('playerA1')!.score).toBe(0);
+    expect(room.youState('playerB1')).not.toBeNull();
+    expect(room.publicState().rev).toBeGreaterThan(rev);
+    room.wipe();
+    expect(room.publicState().players).toHaveLength(0);
+  });
 });

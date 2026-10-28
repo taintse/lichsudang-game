@@ -13,7 +13,6 @@
     "@fontsource/be-vietnam-pro": "^5.2.5",
     "@fontsource/source-serif-4": "^5.2.5",
     "framer-motion": "^11.18.2",
-    "peerjs": "^1.5.4",
     "qrcode": "^1.5.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",

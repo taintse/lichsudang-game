@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { GameRoom } from '../game/room';
 import { submitPerfect } from '../game/perfect';
 import { sounds } from '../audio/sound';
@@ -11,6 +12,7 @@ import { PlayerView, useNow } from './PlayerView';
 const PLAYER_ID = 'soloplus01';
 
 export function SoloScreen() {
+  const nav = useNavigate();
   const roomRef = useRef<GameRoom | null>(null);
   const [version, setVersion] = useState(0);
   const [name, setName] = useState('Bạn');
@@ -22,11 +24,13 @@ export function SoloScreen() {
   useEffect(() => {
     const room = new GameRoom({ code: 'THU' });
     roomRef.current = room;
+    setVersion(1);
     return room.subscribe(() => setVersion((value) => value + 1));
   }, []);
 
   const room = roomRef.current;
   void version;
+  const now = useNow(room ? room.publicState().serverNow : null);
   if (!room) return null;
 
   if (!ready) {
@@ -80,7 +84,6 @@ export function SoloScreen() {
   const pub = room.publicState();
   const you = room.youState(PLAYER_ID);
   if (!you) return null;
-  const now = useNow(pub.serverNow);
 
   return (
     <div className={`solo-app tab-${tab}`}>
@@ -109,6 +112,13 @@ export function SoloScreen() {
           onKick={(playerId) => room.kick(playerId)}
           onSkip={() => room.skipCeremony()}
           onPerfect={() => submitPerfect(room, PLAYER_ID)}
+          onReplay={() => room.replay()}
+          onFinish={() => room.finishNow()}
+          onNewRoom={() => {
+            room.wipe();
+            setReady(false);
+          }}
+          onHome={() => nav('/')}
         />
         <div className="phone-shell">
           <PlayerView

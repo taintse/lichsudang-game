@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import QRCode from 'qrcode';
 import { GameRoom, type HostState } from '../game/room';
 import { makeCode } from '../game/id';
@@ -23,6 +24,7 @@ function readableSave(raw: unknown, code: string): HostState | undefined {
 }
 
 export function HostScreen() {
+  const nav = useNavigate();
   const [notice, setNotice] = useState<NetNotice>({ status: 'connecting' });
   const [code, setCode] = useState('');
   const [qr, setQr] = useState('');
@@ -128,7 +130,7 @@ export function HostScreen() {
       qr={qr}
       now={now}
       mode="live"
-      notice={notice.status === 'open' ? undefined : notice.error ?? 'Đang nối máy chủ phòng…'}
+      notice={notice.status === 'open' ? undefined : notice.error || notice.debug || 'Đang nối kênh mạng…'}
       onNext={() => {
         sounds.unlock();
         room.next();
@@ -137,6 +139,23 @@ export function HostScreen() {
       onResume={() => room.resume()}
       onKick={(playerId) => netRef.current?.kick(playerId)}
       onSkip={() => room.skipCeremony()}
+      onReplay={() => room.replay()}
+      onFinish={() => room.finishNow()}
+      onNewRoom={() => {
+        netRef.current?.announceClose('Giảng viên đã mở phòng mới. Quét mã QR mới hoặc nhập mã phòng mới.');
+        clearHostSave();
+        window.setTimeout(() => {
+          setCode('');
+          setQr('');
+          setBoot((value) => value + 1);
+        }, 400);
+      }}
+      onHome={() => {
+        netRef.current?.announceClose('Giảng viên đã đóng phòng. Nếu lớp chơi tiếp, hãy quét mã phòng mới.');
+        clearHostSave();
+        window.setTimeout(() => nav('/'), 400);
+      }}
+      debug={notice.debug}
     />
   );
 }
