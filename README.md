@@ -46,7 +46,7 @@ Toàn bộ câu nằm trong [`src/data/questions.ts`](src/data/questions.ts). L�
 Trong `CHALLENGES`, mỗi phần tử là một câu, xếp đúng thứ tự chơi. `stageId` phải là `flame`, `autumn`, `dbp`, `victory` hoặc `doimoi`.
 
 - `timeline`: `items` theo thời gian sớm → muộn. `sort` là số để so (ví dụ `19450819` = 19/8/1945). Người chơi không thấy `sort` và `year`.
-- `map`: `placeId` là một trong `pacBo`, `tanTrao`, `baDinh`, `hue`, `saiGon`, `dienBien`. Đổi tọa độ trong `places.ts` nếu cần. Sơ đồ là hình minh họa, không phải bản đồ hành chính.
+- `map`: `placeId` là một trong `pacBo`, `tanTrao`, `baDinh`, `hue`, `saiGon`, `dienBien`. Đổi tọa độ trong `places.ts` nếu cần. Sơ đồ là hình minh họa, không phải bản đồ hành chính. Quần đảo Hoàng Sa và Quần đảo Trường Sa được vẽ trong Biển Đông, cùng màu đất liền.
 - `clues`: `aliases` là các cách gõ được tính đúng (có hoặc không dấu, lệch một hai chữ). `options` là bốn phương án. Đáp án đúng phải khớp một alias — nếu phương án có thêm năm trong ngoặc thì đưa cả cụm đó vào `aliases`.
 - `match`: mỗi `pairs` là một cặp trái ↔ phải. Không cần đánh dấu đáp án riêng.
 - `bet`: đúng một `correctId` trùng `id` của một phương án.
@@ -69,7 +69,7 @@ Mở `http://localhost:5173/lichsudang-game/` rồi vào **Chơi thử**.
 
 Workflow [`.github/workflows/pages.yml`](.github/workflows/pages.yml) chạy khi đẩy lên nhánh `main`: cài gói, chạy kiểm thử, dựng site tĩnh và đẩy lên GitHub Pages.
 
-**Một lần, chủ repo cần bật Pages.** Vào **Settings → Pages → Build and deployment → Source** và chọn **GitHub Actions**. Workflow có thử bật nguồn này tự động; token của GitHub Actions thường không đủ quyền quản trị nên bước đó có thể bị bỏ qua. Sau khi chọn đúng nguồn, mỗi lần đẩy `main` sẽ tự cập nhật [https://taintse.github.io/lichsudang-game/](https://taintse.github.io/lichsudang-game/).
+Repo này đã chọn **Settings → Pages → Build and deployment → Source = GitHub Actions**. Mỗi lần đẩy `main`, workflow dựng site và cập nhật [https://taintse.github.io/lichsudang-game/](https://taintse.github.io/lichsudang-game/). Token của GitHub Actions không đủ quyền tạo site Pages mới; nếu triển khai sang repo khác thì vẫn phải chọn nguồn GitHub Actions một lần.
 
 Ứng dụng dùng `HashRouter` (`/#/host`, `/#/play`, `/#/join/MÃ`, `/#/thu`) nên đường dẫn vẫn đúng trên GitHub Pages. `base` trong Vite là `/lichsudang-game/`.
 
@@ -79,7 +79,7 @@ Workflow [`.github/workflows/pages.yml`](.github/workflows/pages.yml) chạy khi
 - Kết nối đi qua broker công khai `0.peerjs.com` và WebRTC. Không có máy chuyển tiếp (TURN) miễn phí, không cần tài khoản. Mạng chặn UDP thì người chơi không nối được.
 - Khoảng 50–60 người là mức thực tế của một tab trình duyệt.
 - Người quyết tâm có thể tải file JavaScript của trang máy chiếu để xem đáp án. Điểm vẫn do máy chiếu chấm theo thời điểm nhận câu trả lời, không tin số liệu máy người chơi tự khai.
-- Sơ đồ Việt Nam là hình minh họa (đất liền và một số đảo gần bờ), không phải bản đồ hành chính, không vẽ Hoàng Sa và Trường Sa.
+- Sơ đồ Việt Nam là hình minh họa, không phải bản đồ hành chính. Đất liền, đảo gần bờ, Quần đảo Hoàng Sa và Quần đảo Trường Sa cùng một màu. Tên biển là Biển Đông.
 - Hòa điểm: người vào phòng trước xếp trên.
 - Âm thanh tổng hợp trong trình duyệt (không nhạc có bản quyền). Nút tắt tiếng nằm trên cùng, nhớ trong máy.
 
