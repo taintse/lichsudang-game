@@ -24,7 +24,33 @@ export function RevealCard({ reveal, you, big = false }: { reveal: RevealPublic;
           ))}
         </ol>
       )}
-      {reveal.map && <VietnamMap correct={{ x: reveal.map.x, y: reveal.map.y, label: reveal.map.label }} pin={you?.mapPin} guesses={big ? reveal.map.guesses : []} />}
+      {reveal.map && (
+        <>
+          <VietnamMap
+            markers={reveal.map.choices.map((choice) => ({
+              id: choice.id,
+              x: choice.x,
+              y: choice.y,
+              correct: choice.correct,
+              selected: you?.mapChoice === choice.id && !choice.correct,
+              count: big ? choice.count : undefined,
+              label: choice.correct || big ? choice.label : undefined,
+            }))}
+          />
+          {big && (
+            <ul className="answer-list" data-testid="map-counts">
+              {reveal.map.choices.map((choice) => (
+                <li key={choice.id}>
+                  <b>
+                    {choice.count} người{choice.correct ? ' · đúng' : ''}
+                  </b>
+                  <span>{choice.label}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </>
+      )}
       {reveal.pairs && (
         <ul className="answer-list pairs">
           {reveal.pairs.map((pair) => (

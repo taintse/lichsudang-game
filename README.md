@@ -26,7 +26,7 @@ Một phòng khoảng 40–60 người. Vượt quá mức đó, người vào s
 | Năm | Tên | Cách chơi |
 | --- | --- | --- |
 | 1930 | Ngọn lửa đầu tiên | Kéo thả (hoặc nút mũi tên) xếp sự kiện từ sớm đến muộn |
-| 1945 | Mùa thu cách mạng | Chạm sơ đồ Việt Nam, ghim nơi sự kiện diễn ra. Càng gần càng nhiều điểm |
+| 1945 | Mùa thu cách mạng | Chọn một trong bốn dấu trên sơ đồ. Đúng được điểm và thưởng tốc độ |
 | 1954 | Điện Biên Phủ | Manh mối hiện dần. Đoán sớm được điểm cao, đoán sai bị trừ |
 | 1975 | Thống nhất đất nước | Nối cặp sự kiện với năm hoặc ý nghĩa, càng nhanh càng tốt |
 | 1986 | Đổi mới | Cược một phần điểm đang có. Đúng thì được cộng đúng phần đã cược, sai thì mất phần đó |
@@ -46,7 +46,7 @@ Toàn bộ câu nằm trong [`src/data/questions.ts`](src/data/questions.ts). L�
 Trong `CHALLENGES`, mỗi phần tử là một câu, xếp đúng thứ tự chơi. `stageId` phải là `flame`, `autumn`, `dbp`, `victory` hoặc `doimoi`.
 
 - `timeline`: `items` theo thời gian sớm → muộn. `sort` là số để so (ví dụ `19450819` = 19/8/1945). Người chơi không thấy `sort` và `year`.
-- `map`: `placeId` là một trong `pacBo`, `tanTrao`, `baDinh`, `hue`, `saiGon`, `dienBien`. Đổi tọa độ trong `places.ts` nếu cần. Sơ đồ là hình minh họa, không phải bản đồ hành chính. Quần đảo Hoàng Sa và Quần đảo Trường Sa được vẽ trong Biển Đông, cùng màu đất liền.
+- `map`: đúng bốn phần tử trong `options`. Mỗi phần tử có `id` (tự đặt, ví dụ `hue`) và `placeId` là một địa danh trong `places.ts`: `pacBo`, `tanTrao`, `baDinh`, `hue`, `saiGon`, `dienBien`, `vinh`, `quyNhon`. `correctId` phải trùng `id` của mốc đúng. Bốn mốc nên nằm xa nhau trên sơ đồ để dấu không đè lên nhau. Muốn thêm địa danh, thêm tọa độ vào `places.ts` rồi dùng `placeId` đó. Sơ đồ là hình minh họa, có Quần đảo Hoàng Sa và Quần đảo Trường Sa trong Biển Đông.
 - `clues`: `aliases` là các cách gõ được tính đúng (có hoặc không dấu, lệch một hai chữ). `options` là bốn phương án. Đáp án đúng phải khớp một alias — nếu phương án có thêm năm trong ngoặc thì đưa cả cụm đó vào `aliases`.
 - `match`: mỗi `pairs` là một cặp trái ↔ phải. Không cần đánh dấu đáp án riêng.
 - `bet`: đúng một `correctId` trùng `id` của một phương án.

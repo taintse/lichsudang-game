@@ -25,10 +25,10 @@ export const STAGES: StageMeta[] = [
     id: 'autumn',
     year: '1945',
     title: 'Mùa thu cách mạng',
-    kicker: 'Chặng 2 · Ghim địa danh',
+    kicker: 'Chặng 2 · Chọn địa danh',
     blurb:
-      'Cách mạng tháng Tám và những địa danh đã đi vào lịch sử. Chạm sơ đồ, ghim nơi sự kiện diễn ra — càng gần càng nhiều điểm.',
-    howTo: 'Chạm sơ đồ để thả ghim. Kính lúp hiện phía trên ngón tay. Có thể sửa trước khi chốt.',
+      'Cách mạng tháng Tám và những địa danh đã đi vào lịch sử. Trên sơ đồ có bốn dấu — chọn đúng nơi sự kiện diễn ra.',
+    howTo: 'Chạm một dấu. Ngôi sao là lựa chọn của bạn. Có thể đổi trước khi chốt.',
     theme: 'autumn',
   },
   {

@@ -35,7 +35,10 @@ function sid(rand: () => number): string {
 
 export interface BuiltRound {
   challenge: PublicChallenge;
+  /** For match: left id → shuffled right id. For map: public marker id → option id. */
   matchKey: Record<string, string> | null;
+  /** Public marker id of the correct map place. */
+  answerId: string | null;
 }
 
 export function buildRound(challenge: Challenge, howTo: string, seed: string): BuiltRound {
@@ -54,17 +57,29 @@ export function buildRound(challenge: Challenge, howTo: string, seed: string): B
           rand,
         ),
       },
+      answerId: null,
     };
   }
   if (challenge.t === 'map') {
+    const markers = shuffle(
+      challenge.options.map((option) => {
+        const point = placePoint(option.placeId);
+        return { id: sid(rand), x: Math.round(point.x), y: Math.round(point.y), optionId: option.id };
+      }),
+      rand,
+    );
+    const matchKey = Object.fromEntries(markers.map((marker) => [marker.id, marker.optionId]));
+    const answer = markers.find((marker) => marker.optionId === challenge.correctId);
     return {
-      matchKey: null,
+      matchKey,
+      answerId: answer?.id ?? null,
       challenge: {
         t: 'map',
         id: challenge.id,
         prompt: challenge.prompt,
         timeLimit: challenge.timeLimit,
         howTo,
+        markers: markers.map((marker) => ({ id: marker.id, x: marker.x, y: marker.y })),
       },
     };
   }
@@ -80,6 +95,7 @@ export function buildRound(challenge: Challenge, howTo: string, seed: string): B
         clues: challenge.clues.map((clue) => ({ text: clue.text, revealAt: clue.revealAt })),
         options: shuffle(challenge.options.slice(), rand),
       },
+      answerId: null,
     };
   }
   if (challenge.t === 'match') {
@@ -103,6 +119,7 @@ export function buildRound(challenge: Challenge, howTo: string, seed: string): B
         ),
         right: shuffle(right, rand),
       },
+      answerId: null,
     };
   }
   return {
@@ -119,10 +136,15 @@ export function buildRound(challenge: Challenge, howTo: string, seed: string): B
         rand,
       ),
     },
+    answerId: null,
   };
 }
 
-export function buildReveal(challenge: Challenge, guesses: { x: number; y: number }[]): RevealPublic {
+export function buildReveal(
+  challenge: Challenge,
+  mapCounts: Record<string, number> = {},
+  markerKey: Record<string, string> | null = null,
+): RevealPublic {
   if (challenge.t === 'timeline') {
     const ordered = [...challenge.items].sort((a, b) => a.sort - b.sort);
     return {
@@ -132,11 +154,23 @@ export function buildReveal(challenge: Challenge, guesses: { x: number; y: numbe
     };
   }
   if (challenge.t === 'map') {
-    const point = placePoint(challenge.placeId);
     return {
       headline: challenge.headline,
       explanation: challenge.explanation,
-      map: { x: point.x, y: point.y, label: point.name, guesses },
+      map: {
+        choices: challenge.options.map((option) => {
+          const point = placePoint(option.placeId);
+          const publicId = Object.entries(markerKey ?? {}).find(([, optionId]) => optionId === option.id)?.[0] ?? option.id;
+          return {
+            id: publicId,
+            x: Math.round(point.x),
+            y: Math.round(point.y),
+            label: point.name,
+            count: mapCounts[publicId] ?? 0,
+            correct: option.id === challenge.correctId,
+          };
+        }),
+      },
     };
   }
   if (challenge.t === 'match') {
@@ -181,8 +215,8 @@ export function debugKey(pos: number, matchKey: Record<string, string> | null): 
     };
   }
   if (challenge.t === 'map') {
-    const point = placePoint(challenge.placeId);
-    return { t: 'map', id: challenge.id, x: point.x, y: point.y, answer: point.name };
+    const correct = challenge.options.find((option) => option.id === challenge.correctId);
+    return { t: 'map', id: challenge.id, optionId: challenge.correctId, answer: correct ? placePoint(correct.placeId).name : '' };
   }
   if (challenge.t === 'clues') {
     return { t: 'clues', id: challenge.id, answer: challenge.aliases[0] };

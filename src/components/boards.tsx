@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { foldVi } from '../game/text';
 import type { PublicChallenge, YouState } from '../game/types';
 import { formatPoints } from '../game/text';
-import { VietnamMap, type MapPoint } from './VietnamMap';
+import { VietnamMap } from './VietnamMap';
 
 interface Common {
   you: YouState;
@@ -109,17 +109,22 @@ export function TimelineBoard({
 }
 
 export function MapBoard({
+  challenge,
   you,
   locked,
   onSubmit,
-}: Common & { onSubmit: (point: MapPoint) => void }) {
-  const [pin, setPin] = useState<MapPoint | null>(you.mapPin);
+}: Common & { challenge: Extract<PublicChallenge, { t: 'map' }>; onSubmit: (choice: string) => void }) {
+  const [choice, setChoice] = useState<string | null>(you.mapChoice);
+  const selected = you.mapChoice ?? choice;
   const done = you.submitted || locked;
   return (
     <div className="board-play">
-      <VietnamMap interactive={!done} pin={done ? you.mapPin ?? pin : pin} onPin={setPin} />
-      <button type="button" className="btn btn-red" data-testid="map-lock" disabled={done || !pin} onClick={() => pin && onSubmit(pin)}>
-        {you.submitted ? 'Đã ghim' : 'Chốt vị trí'}
+      <VietnamMap
+        markers={challenge.markers.map((marker) => ({ ...marker, selected: marker.id === selected }))}
+        onSelect={done ? undefined : setChoice}
+      />
+      <button type="button" className="btn btn-red" data-testid="map-lock" disabled={done || !selected} onClick={() => selected && onSubmit(selected)}>
+        {you.submitted ? 'Đã chốt vị trí' : 'Chốt vị trí'}
       </button>
     </div>
   );

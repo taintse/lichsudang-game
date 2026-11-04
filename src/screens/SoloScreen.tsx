@@ -126,7 +126,7 @@ export function SoloScreen() {
             you={you}
             now={now}
             onTimeline={(order) => room.handleClient({ t: 'timeline', playerId: PLAYER_ID, order })}
-            onMap={(point) => room.handleClient({ t: 'map', playerId: PLAYER_ID, x: point.x, y: point.y })}
+            onMap={(choice) => room.handleClient({ t: 'map', playerId: PLAYER_ID, choice })}
             onClue={(text) => room.handleClient({ t: 'clue', playerId: PLAYER_ID, text })}
             onMatch={(leftId, rightId) => room.handleClient({ t: 'match', playerId: PLAYER_ID, leftId, rightId })}
             onBet={(wagerPct, optionId) => room.handleClient({ t: 'bet', playerId: PLAYER_ID, wagerPct, optionId })}

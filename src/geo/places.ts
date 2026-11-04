@@ -1,7 +1,7 @@
 import { project } from './vietnam';
 
 /** Answer coordinates for the host only. Do not import this file from player UI. */
-export const PLACE_IDS = ['pacBo', 'tanTrao', 'baDinh', 'hue', 'saiGon', 'dienBien'] as const;
+export const PLACE_IDS = ['pacBo', 'tanTrao', 'baDinh', 'hue', 'saiGon', 'dienBien', 'vinh', 'quyNhon'] as const;
 export type PlaceId = (typeof PLACE_IDS)[number];
 
 export const PLACES: Record<PlaceId, { lat: number; lng: number; name: string }> = {
@@ -11,6 +11,8 @@ export const PLACES: Record<PlaceId, { lat: number; lng: number; name: string }>
   hue: { lat: 16.47, lng: 107.58, name: 'Huế' },
   saiGon: { lat: 10.777, lng: 106.701, name: 'Sài Gòn' },
   dienBien: { lat: 21.386, lng: 103.023, name: 'Điện Biên Phủ' },
+  vinh: { lat: 18.68, lng: 105.69, name: 'Vinh' },
+  quyNhon: { lat: 13.77, lng: 109.22, name: 'Quy Nhơn' },
 };
 
 export function placePoint(id: PlaceId): { x: number; y: number; name: string } {

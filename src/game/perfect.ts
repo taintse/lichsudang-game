@@ -8,8 +8,8 @@ export function submitPerfect(room: GameRoom, playerId: string) {
   if (!key || !challenge) return;
   if (key.t === 'timeline' && key.order) {
     room.handleClient({ t: 'timeline', playerId, order: key.order });
-  } else if (key.t === 'map' && key.x != null && key.y != null) {
-    room.handleClient({ t: 'map', playerId, x: key.x, y: key.y });
+  } else if (key.t === 'map' && key.optionId) {
+    room.handleClient({ t: 'map', playerId, choice: key.optionId });
   } else if (key.t === 'clues' && key.answer) {
     room.handleClient({ t: 'clue', playerId, text: key.answer });
   } else if (key.t === 'match' && key.pairs) {
