@@ -171,6 +171,7 @@ export function buildRound(challenge: Challenge, howTo: string, seed: string): B
     challenge: {
       t: 'bet',
       id: challenge.id,
+      topic: challenge.topic,
       scenario: challenge.scenario,
       question: challenge.question,
       timeLimit: challenge.timeLimit,

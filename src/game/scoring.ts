@@ -5,6 +5,7 @@ export interface TimelinePending {
   kind: 'timeline';
   order: string[];
   at: number;
+  locked: boolean;
 }
 export interface MapPending {
   kind: 'map';
@@ -23,22 +24,38 @@ export interface MatchPending {
   pairs: { leftId: string; rightId: string }[];
   mistakes: number;
   doneAt: number | null;
+  at: number;
+  locked: boolean;
 }
 export interface BetPending {
   kind: 'bet';
   pct: number;
   optionId: string;
   at: number;
+  locked: boolean;
+  betSet: boolean;
+  usedDefault: boolean;
 }
 export interface BucketPending {
   kind: 'bucket';
   picks: { id: string; side: 'left' | 'right' }[];
   at: number;
+  locked: boolean;
 }
 export interface RecruitPending {
   kind: 'recruit';
   ids: string[];
   at: number;
+  locked: boolean;
+}
+
+/** Lowest stake basis so a player on 0 can still move the rank. */
+export const STAKE_FLOOR = 100;
+export const DEFAULT_WAGER_PCT = 25;
+
+export function stakeOf(score: number, pct: number): number {
+  const basis = Math.max(score, STAKE_FLOOR);
+  return Math.max(0, Math.round((basis * pct) / 100));
 }
 export type Pending = TimelinePending | MapPending | CluePending | MatchPending | BetPending | BucketPending | RecruitPending;
 
@@ -109,7 +126,7 @@ export function gradeAnswer(
     }
     const stats = orderStats(pending.order, correct);
     const perfect = stats.accuracy === 1;
-    const speed = perfect ? Math.round(400 * remainRatio(pending.at - startedAt, timeLimitMs)) : 0;
+    const speed = perfect && pending.locked ? Math.round(400 * remainRatio(pending.at - startedAt, timeLimitMs)) : 0;
     const base = Math.round(1000 * stats.accuracy) + speed;
     const note = perfect ? 'Đúng thứ tự' : `Đúng ${stats.correctPairs}/${stats.totalPairs} cặp thứ tự`;
     return { perfect, base, wagerDelta: 0, note };
@@ -168,7 +185,7 @@ export function gradeAnswer(
     }
     const total = challenge.cards.length;
     const perfect = total > 0 && correct === total && seen.size === total;
-    const speed = perfect ? Math.round(400 * remainRatio(pending.at - startedAt, timeLimitMs)) : 0;
+    const speed = perfect && pending.locked ? Math.round(400 * remainRatio(pending.at - startedAt, timeLimitMs)) : 0;
     return {
       perfect,
       base: Math.round(1000 * (total ? correct / total : 0)) + speed,
@@ -192,7 +209,7 @@ export function gradeAnswer(
       } else if (selected.has(card.id)) wrong += 1;
     }
     const perfect = okTotal > 0 && hit === okTotal && wrong === 0;
-    const speed = perfect ? Math.round(400 * remainRatio(pending.at - startedAt, timeLimitMs)) : 0;
+    const speed = perfect && pending.locked ? Math.round(400 * remainRatio(pending.at - startedAt, timeLimitMs)) : 0;
     const base = Math.round(1000 * (okTotal ? hit / okTotal : 0)) - wrong * 180 + speed;
     return {
       perfect,
@@ -211,7 +228,8 @@ export function gradeAnswer(
     for (const pair of pairs) if (key[pair.leftId] === pair.rightId) correct++;
     const total = challenge.pairs.length;
     const all = total > 0 && correct === total;
-    const speed = all && doneAt != null ? Math.round(400 * remainRatio(doneAt - startedAt, timeLimitMs)) : 0;
+    const locked = pending?.kind === 'match' && pending.locked;
+    const speed = all && mistakes === 0 && locked && doneAt != null ? Math.round(400 * remainRatio(doneAt - startedAt, timeLimitMs)) : 0;
     const base = Math.max(0, Math.round(1000 * (total ? correct / total : 0)) - mistakes * 50) + speed;
     return {
       perfect: all && mistakes === 0,
@@ -221,19 +239,21 @@ export function gradeAnswer(
     };
   }
 
-  const pct = pending?.kind === 'bet' ? pending.pct : 0;
-  const optionId = pending?.kind === 'bet' ? pending.optionId : '';
-  const at = pending?.kind === 'bet' ? pending.at : startedAt + timeLimitMs;
+  const bet = pending?.kind === 'bet' ? pending : null;
+  const pct = bet?.pct ?? DEFAULT_WAGER_PCT;
+  const optionId = bet?.optionId ?? '';
+  const at = bet?.at ?? startedAt + timeLimitMs;
   const correct = optionId === challenge.correctId;
-  const wager = Math.max(0, Math.min(scoreBefore, Math.round((scoreBefore * pct) / 100)));
+  const wager = stakeOf(scoreBefore, pct);
   const ratio = remainRatio(at - startedAt, timeLimitMs);
-  const flat = correct ? Math.round(120 + 180 * ratio) : 0;
   const picked = challenge.options.find((option) => option.id === optionId);
-  const note = !picked ? 'Không đặt cược' : correct ? `Cược đúng ${wager} điểm` : `Mất ${wager} điểm cược`;
+  const flat = correct && picked ? (bet?.locked ? Math.round(120 + 180 * ratio) : 120) : 0;
+  const prefix = bet?.usedDefault ? 'Mặc định 25% · ' : '';
+  const note = !picked ? 'Chưa trả lời' : correct ? `${prefix}Cược đúng ${wager} điểm` : `${prefix}Mất ${wager} điểm cược`;
   return {
     perfect: correct && !!picked,
     base: flat,
-    wagerDelta: correct ? wager : picked ? -wager : 0,
+    wagerDelta: !picked ? 0 : correct ? wager : -wager,
     note,
   };
 }
@@ -253,7 +273,7 @@ export function spentMs(pending: Pending | null, startedAt: number, timeLimitMs:
   if (!pending) return timeLimitMs;
   const cap = (at: number) => Math.max(0, Math.min(timeLimitMs, at - startedAt));
   if (pending.kind === 'clues') return pending.solvedAt == null ? timeLimitMs : cap(pending.solvedAt);
-  if (pending.kind === 'match') return pending.doneAt == null ? timeLimitMs : cap(pending.doneAt);
+  if (pending.kind === 'match') return cap(pending.doneAt ?? pending.at);
   return cap(pending.at);
 }
 

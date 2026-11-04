@@ -32,6 +32,7 @@ interface Props {
 function nextLabel(pub: PublicState): string {
   if (pub.phase === 'lobby') return 'Bắt đầu';
   if (pub.phase === 'intro') return 'Vào thử thách';
+  if (pub.phase === 'wager') return 'Mở câu hỏi';
   if (pub.phase === 'play') return 'Hiện đáp án';
   if (pub.phase === 'reveal') return 'Bảng xếp hạng';
   if (pub.phase === 'board') {
@@ -132,7 +133,7 @@ export function HostView({
     return () => window.removeEventListener('keydown', onKey);
   }, [onNext, onPause, onResume, pub.paused]);
 
-  const sent = pub.players.filter((player) => player.submitted).length;
+  const sent = pub.players.filter((player) => player.answered).length;
   const stageIndex = STAGES.findIndex((stage) => stage.id === pub.stage?.id);
 
   return (
@@ -223,6 +224,20 @@ export function HostView({
           </section>
         )}
 
+        {pub.phase === 'wager' && pub.challenge?.t === 'bet' && (
+          <section className="play-host">
+            <div className="play-copy">
+              <p className="eyebrow">Đặt cược</p>
+              <h1 data-testid="wager-topic">{pub.challenge.topic}</h1>
+              <p className="fine">Câu hỏi sẽ hiện sau khi hết giờ đặt cược. Chưa chọn thì mặc định 25%.</p>
+              <p className="sent" data-testid="all-in-count">
+                {pub.allIn} người tất tay
+              </p>
+            </div>
+            <TimerRing ms={remain} total={total} />
+          </section>
+        )}
+
         {pub.phase === 'play' && pub.challenge && (
           <section className="play-host">
             <div className="play-copy">
@@ -235,11 +250,11 @@ export function HostView({
             </div>
             <TimerRing ms={remain} total={total} />
             <p className="sent" data-testid="submitted-count">
-              {sent}/{Math.max(connected, pub.players.length)} đã trả lời
+              {sent}/{Math.max(connected, pub.players.length)} đã lưu đáp án
             </p>
             <ul className="mini-roster">
               {pub.players.map((player) => (
-                <li key={player.id} className={player.submitted ? 'in' : ''}>
+                <li key={player.id} className={player.answered ? 'in' : ''}>
                   <Avatar id={player.avatar} size={36} />
                 </li>
               ))}

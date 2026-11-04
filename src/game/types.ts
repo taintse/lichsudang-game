@@ -1,6 +1,6 @@
 import type { ThemeId } from '../data/stages';
 
-export type Phase = 'lobby' | 'intro' | 'play' | 'reveal' | 'board' | 'gate' | 'podium';
+export type Phase = 'lobby' | 'intro' | 'wager' | 'play' | 'reveal' | 'board' | 'gate' | 'podium';
 
 export type Twist = 'double' | 'spy';
 
@@ -59,6 +59,7 @@ export interface PublicMatch {
 export interface PublicBet {
   t: 'bet';
   id: string;
+  topic: string;
   scenario: string;
   question: string;
   timeLimit: number;
@@ -112,6 +113,9 @@ export interface PublicPlayer {
   answerMs: number;
   connected: boolean;
   submitted: boolean;
+  /** Saved a draft or locked an answer. */
+  answered: boolean;
+  wagerPct: number | null;
 }
 
 export interface PublicState {
@@ -140,6 +144,8 @@ export interface PublicState {
   stageBreakNext: boolean;
   /** On the leaderboard, the next host action opens the podium. */
   finalNext: boolean;
+  /** Players currently at 100% on a betting round. */
+  allIn: number;
 }
 
 export interface YouState {
@@ -156,7 +162,9 @@ export interface YouState {
   solved: boolean;
   wrongGuesses: number;
   mapChoice: string | null;
-  lastResult: null | { delta: number; correct: boolean; note: string };
+  wagerPct: number | null;
+  wagerStake: number | null;
+  lastResult: null | { delta: number; correct: boolean; note: string; swing: number };
   kicked: boolean;
 }
 
@@ -166,9 +174,11 @@ export type ClientMessage =
   | { t: 'map'; playerId: string; choice: string }
   | { t: 'clue'; playerId: string; text: string }
   | { t: 'match'; playerId: string; leftId: string; rightId: string }
-  | { t: 'bet'; playerId: string; wagerPct: number; optionId: string }
+  | { t: 'bet'; playerId: string; optionId: string }
+  | { t: 'wager'; playerId: string; pct: number }
   | { t: 'bucket'; playerId: string; picks: { id: string; side: 'left' | 'right' }[] }
-  | { t: 'recruit'; playerId: string; ids: string[] };
+  | { t: 'recruit'; playerId: string; ids: string[] }
+  | { t: 'lock'; playerId: string };
 
 export type ServerMessage =
   | { t: 'state'; public: PublicState; you: YouState }

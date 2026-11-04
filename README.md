@@ -33,7 +33,11 @@ Một phòng khoảng 40–60 người. Vượt quá mức đó, người vào s
 
 Đúng liên tiếp có chuỗi combo (tối đa ×1,6) và thưởng tốc độ khi câu hoàn hảo. Đầu chặng cược mỗi người được cộng **800 điểm vốn**. Hòa điểm: người có tổng thời gian trả lời ngắn hơn xếp trên; nếu vẫn hòa thì người vào phòng trước xếp trên.
 
-**11 câu, mỗi câu tối đa 4 thẻ.** Nếu không ai bấm bỏ qua, cả ván từ chặng đầu tới màn «Sẵn sàng trao giải» mất khoảng **5 phút 49 giây** (5 lần giới thiệu × 7 giây + 138 giây trả lời + 11 × 16 giây đáp án và bảng). Lễ trao giải do giảng viên bấm, không tính vào 12 phút. Không có thanh thời gian tổng trên máy chiếu.
+**11 câu, mỗi câu tối đa 4 thẻ.** Nếu không ai bấm bỏ qua, cả ván tới màn «Sẵn sàng trao giải» khoảng **6 phút 13 giây** (373 giây: 5 × 7 giây giới thiệu + 3 × 8 giây đặt cược + 138 giây trả lời + 11 × 16 giây đáp án và bảng). Không có đồng hồ tổng.
+
+Mỗi thao tác được lưu ngay. Hết giờ, máy chiếu chấm bản lưu cuối, kể cả khi chưa bấm **Chốt**. Chưa đụng vào câu thì 0 điểm. Đúng một phần được điểm phần đó (thứ tự, thẻ, cặp). **Điểm tốc độ chỉ khi bấm Chốt và câu hoàn hảo** — lúc chốt là mốc thời gian. Không chốt thì vẫn có điểm nội dung, không có thưởng tốc độ.
+
+Ba câu cuối: khoảng 8 giây chỉ hiện chủ đề và mức cược (25%, 50%, tất tay, hoặc thanh trượt). Chưa chọn thì mặc định **25%** điểm đang có. Dưới 100 điểm thì khoản cược tính trên mức sàn 100, để người gần 0 vẫn đổi được hạng. Hết giờ cược thì khóa mức, rồi mới hiện câu hỏi khoảng 12 giây.
 
 Người chơi dùng điện thoại hoặc laptop, cùng trang **Vào phòng**. Vuốt có nút và phím mũi tên. Nút bấm cao ít nhất 44px. Chạm lần đầu bật tiếng.
 

@@ -135,9 +135,11 @@ export function SoloScreen() {
             onMap={(choice) => room.handleClient({ t: 'map', playerId: PLAYER_ID, choice })}
             onClue={(text) => room.handleClient({ t: 'clue', playerId: PLAYER_ID, text })}
             onMatch={(leftId, rightId) => room.handleClient({ t: 'match', playerId: PLAYER_ID, leftId, rightId })}
-            onBet={(wagerPct, optionId) => room.handleClient({ t: 'bet', playerId: PLAYER_ID, wagerPct, optionId })}
+            onBet={(optionId) => room.handleClient({ t: 'bet', playerId: PLAYER_ID, optionId })}
             onBucket={(picks) => room.handleClient({ t: 'bucket', playerId: PLAYER_ID, picks })}
             onRecruit={(ids) => room.handleClient({ t: 'recruit', playerId: PLAYER_ID, ids })}
+            onWager={(pct) => room.handleClient({ t: 'wager', playerId: PLAYER_ID, pct })}
+            onLock={() => room.handleClient({ t: 'lock', playerId: PLAYER_ID })}
           />
         </div>
       </div>

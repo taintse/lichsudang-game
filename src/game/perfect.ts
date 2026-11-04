@@ -15,10 +15,12 @@ export function submitPerfect(room: GameRoom, playerId: string) {
   } else if (key.t === 'match' && key.pairs) {
     for (const pair of key.pairs) room.handleClient({ t: 'match', playerId, leftId: pair.leftId, rightId: pair.rightId });
   } else if (key.t === 'bet' && key.optionId && challenge.t === 'bet') {
-    room.handleClient({ t: 'bet', playerId, wagerPct: 25, optionId: key.optionId });
+    if (room.getState().phase === 'wager') room.handleClient({ t: 'wager', playerId, pct: 25 });
+    room.handleClient({ t: 'bet', playerId, optionId: key.optionId });
   } else if (key.t === 'bucket' && key.picks) {
     room.handleClient({ t: 'bucket', playerId, picks: key.picks });
   } else if (key.t === 'recruit' && key.ids) {
     room.handleClient({ t: 'recruit', playerId, ids: key.ids });
   }
+  if (key.t !== 'map' && key.t !== 'clues') room.handleClient({ t: 'lock', playerId });
 }

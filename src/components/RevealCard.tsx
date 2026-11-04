@@ -10,6 +10,11 @@ export function RevealCard({ reveal, you, big = false }: { reveal: RevealPublic;
       <h2>{reveal.headline}</h2>
       {result && (
         <p className={result.delta > 0 ? 'delta good' : result.delta < 0 ? 'delta bad' : 'delta'} data-testid="delta">
+          {result.swing !== 0 && (
+            <span className={result.swing > 0 ? 'stake-pop win' : 'stake-pop lose'} data-testid="stake-swing">
+              {result.swing > 0 ? `+${formatPoints(result.swing)}` : formatPoints(result.swing)} cược
+            </span>
+          )}
           {result.delta > 0 ? `+${formatPoints(result.delta)}` : formatPoints(result.delta)} · {result.note}
           {result.correct && you && you.combo >= 2 ? ` · chuỗi ${you.combo}` : ''}
         </p>

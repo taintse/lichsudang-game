@@ -9,28 +9,46 @@ interface Common {
   locked: boolean;
 }
 
+function SaveHint({ done }: { done: boolean }) {
+  return <p className="hint">{done ? 'Đã chốt. Điểm tốc độ tính từ lúc này.' : 'Đã lưu. Chốt nếu xong sớm để lấy điểm tốc độ.'}</p>;
+}
+
 export function TimelineBoard({
   challenge,
   you,
   locked,
   onSubmit,
-}: Common & { challenge: Extract<PublicChallenge, { t: 'timeline' }>; onSubmit: (order: string[]) => void }) {
+  onLock,
+}: Common & { challenge: Extract<PublicChallenge, { t: 'timeline' }>; onSubmit: (order: string[]) => void; onLock: () => void }) {
   const [order, setOrder] = useState(challenge.items);
+  const orderRef = useRef(challenge.items);
   const dragId = useRef<string | null>(null);
   const listRef = useRef<HTMLUListElement>(null);
-  useEffect(() => setOrder(challenge.items), [challenge.id]);
+  const draftTimer = useRef<number | null>(null);
+  useEffect(() => {
+    orderRef.current = challenge.items;
+    setOrder(challenge.items);
+  }, [challenge.id]);
   const done = you.submitted || locked;
 
+  function publish(next: typeof order, immediate: boolean) {
+    orderRef.current = next;
+    setOrder(next);
+    if (draftTimer.current) window.clearTimeout(draftTimer.current);
+    const ids = next.map((item) => item.id);
+    if (immediate) onSubmit(ids);
+    else draftTimer.current = window.setTimeout(() => onSubmit(ids), 200);
+  }
+
   function move(id: string, dir: -1 | 1) {
-    setOrder((prev) => {
-      const index = prev.findIndex((item) => item.id === id);
-      const next = index + dir;
-      if (index < 0 || next < 0 || next >= prev.length) return prev;
-      const copy = prev.slice();
-      const [item] = copy.splice(index, 1);
-      copy.splice(next, 0, item);
-      return copy;
-    });
+    const prev = orderRef.current;
+    const index = prev.findIndex((item) => item.id === id);
+    const nextIndex = index + dir;
+    if (index < 0 || nextIndex < 0 || nextIndex >= prev.length) return;
+    const copy = prev.slice();
+    const [item] = copy.splice(index, 1);
+    copy.splice(nextIndex, 0, item);
+    publish(copy, true);
   }
 
   function reorder(id: string, clientY: number) {
@@ -45,17 +63,16 @@ export function TimelineBoard({
         break;
       }
     }
-    setOrder((prev) => {
-      const from = prev.findIndex((item) => item.id === id);
-      if (from < 0) return prev;
-      let to = target;
-      if (from < to) to -= 1;
-      if (from === to) return prev;
-      const copy = prev.slice();
-      const [item] = copy.splice(from, 1);
-      copy.splice(to, 0, item);
-      return copy;
-    });
+    const prev = orderRef.current;
+    const from = prev.findIndex((item) => item.id === id);
+    if (from < 0) return;
+    let to = target;
+    if (from < to) to -= 1;
+    if (from === to) return;
+    const copy = prev.slice();
+    const [item] = copy.splice(from, 1);
+    copy.splice(to, 0, item);
+    publish(copy, false);
   }
 
   return (
@@ -76,6 +93,10 @@ export function TimelineBoard({
         }}
         onPointerUp={() => {
           dragId.current = null;
+          if (draftTimer.current) {
+            window.clearTimeout(draftTimer.current);
+            onSubmit(orderRef.current.map((item) => item.id));
+          }
         }}
         onPointerCancel={() => {
           dragId.current = null;
@@ -112,7 +133,17 @@ export function TimelineBoard({
           </li>
         ))}
       </ul>
-      <button type="button" className="btn btn-red" data-testid="timeline-lock" disabled={done} onClick={() => onSubmit(order.map((item) => item.id))}>
+      <SaveHint done={you.submitted} />
+      <button
+        type="button"
+        className="btn btn-red"
+        data-testid="timeline-lock"
+        disabled={done}
+        onClick={() => {
+          onSubmit(orderRef.current.map((item) => item.id));
+          onLock();
+        }}
+      >
         {you.submitted ? 'Đã chốt thứ tự' : 'Chốt thứ tự'}
       </button>
     </div>
@@ -204,7 +235,8 @@ export function MatchBoard({
   you,
   locked,
   onPair,
-}: Common & { challenge: Extract<PublicChallenge, { t: 'match' }>; onPair: (leftId: string, rightId: string) => void }) {
+  onLock,
+}: Common & { challenge: Extract<PublicChallenge, { t: 'match' }>; onPair: (leftId: string, rightId: string) => void; onLock: () => void }) {
   const [leftId, setLeftId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const matchedLeft = new Set(you.matchedPairs.map((pair) => pair.leftId));
@@ -261,49 +293,78 @@ export function MatchBoard({
         Đã khớp {you.matchedPairs.length}/{challenge.left.length}
         {you.mistakeSeq > 0 ? ` · sai ${you.mistakeSeq}` : ''}
       </p>
+      <SaveHint done={you.submitted} />
+      <button type="button" className="btn btn-red" data-testid="match-lock" disabled={locked || you.submitted} onClick={onLock}>
+        {you.submitted ? 'Đã chốt' : 'Chốt cặp'}
+      </button>
     </div>
   );
 }
 
-const WAGERS = [
-  { pct: 0, label: 'Giữ điểm' },
-  { pct: 10, label: '10%' },
+const WAGER_CHIPS = [
   { pct: 25, label: '25%' },
   { pct: 50, label: '50%' },
   { pct: 100, label: 'Tất tay' },
 ] as const;
 
-export function BetBoard({
-  challenge,
-  you,
-  locked,
-  onSubmit,
-}: Common & { challenge: Extract<PublicChallenge, { t: 'bet' }>; onSubmit: (pct: number, optionId: string) => void }) {
-  const [pct, setPct] = useState<number | null>(null);
-  const [optionId, setOptionId] = useState<string | null>(null);
-  const wager = pct == null ? 0 : Math.round((you.score * pct) / 100);
-  const done = you.submitted || locked;
+export function WagerBoard({ you, onPick }: { you: YouState; onPick: (pct: number) => void }) {
+  const [pct, setPct] = useState(you.wagerPct ?? 25);
+  const stake = you.wagerStake ?? Math.max(100, you.score);
+  const shown = Math.round((Math.max(you.score, 100) * pct) / 100);
+  function choose(next: number) {
+    const value = Math.max(25, Math.min(100, Math.round(next)));
+    setPct(value);
+    onPick(value);
+  }
   return (
     <div className="board-play">
-      <p className="scenario">{challenge.scenario}</p>
       <p className="bank">
-        Điểm đang có: <strong>{formatPoints(you.score)}</strong>
+        Điểm đang có: <strong data-testid="wager-score">{formatPoints(you.score)}</strong>
       </p>
       <div className="wagers">
-        {WAGERS.map((chip) => (
+        {WAGER_CHIPS.map((chip) => (
           <button
             type="button"
             key={chip.pct}
             data-testid={`bet-pct-${chip.pct}`}
             className={pct === chip.pct ? 'chip on' : 'chip'}
-            disabled={done}
-            onClick={() => setPct(chip.pct)}
+            onClick={() => choose(chip.pct)}
           >
             {chip.label}
           </button>
         ))}
       </div>
-      {pct === 100 && <p className="bad-note">Tất tay: sai là mất hết điểm đang có.</p>}
+      <label className="slider-line">
+        Mức cược {pct}%
+        <input data-testid="wager-slider" type="range" min={25} max={100} step={5} value={pct} onChange={(event) => choose(Number(event.target.value))} />
+      </label>
+      <p className="hint">
+        Đang cược khoảng <strong>{formatPoints(you.wagerStake ?? shown)}</strong> điểm. Dưới 100 điểm thì tính trên mức sàn 100.
+      </p>
+      <p className="hint" data-testid="wager-default">
+        Chưa chọn thì mặc định 25% khi mở câu hỏi.
+      </p>
+      {pct === 100 && <p className="bad-note">Tất tay: sai là mất khoản cược, tính trên điểm đang có.</p>}
+      <span className="sr-only">{stake}</span>
+    </div>
+  );
+}
+
+export function BetBoard({
+  challenge,
+  you,
+  locked,
+  onPick,
+  onLock,
+}: Common & { challenge: Extract<PublicChallenge, { t: 'bet' }>; onPick: (optionId: string) => void; onLock: () => void }) {
+  const [optionId, setOptionId] = useState<string | null>(null);
+  const done = you.submitted || locked;
+  return (
+    <div className="board-play">
+      <p className="scenario">{challenge.scenario}</p>
+      <p className="bank">
+        Đã khóa cược {you.wagerPct ?? 25}% · <strong>{formatPoints(you.wagerStake ?? 0)}</strong> điểm
+      </p>
       <div className="options">
         {challenge.options.map((option) => (
           <button
@@ -312,25 +373,18 @@ export function BetBoard({
             data-testid={`bet-option-${option.id}`}
             className={optionId === option.id ? 'opt on' : 'opt'}
             disabled={done}
-            onClick={() => setOptionId(option.id)}
+            onClick={() => {
+              setOptionId(option.id);
+              onPick(option.id);
+            }}
           >
             {option.text}
           </button>
         ))}
       </div>
-      <p className="hint">
-        {pct == null || !optionId
-          ? 'Chọn mức cược và một phương án.'
-          : `Đúng: +${formatPoints(wager)} và thưởng tốc độ · Sai: −${formatPoints(wager)}`}
-      </p>
-      <button
-        type="button"
-        className="btn btn-red"
-        data-testid="bet-lock"
-        disabled={done || pct == null || !optionId}
-        onClick={() => pct != null && optionId && onSubmit(pct, optionId)}
-      >
-        {you.submitted ? 'Đã chốt cược' : 'Chốt cược'}
+      <SaveHint done={you.submitted} />
+      <button type="button" className="btn btn-red" data-testid="bet-lock" disabled={done || !optionId} onClick={onLock}>
+        {you.submitted ? 'Đã chốt' : 'Chốt đáp án'}
       </button>
     </div>
   );
@@ -341,20 +395,23 @@ export function BucketBoard({
   you,
   locked,
   onSubmit,
+  onLock,
 }: Common & {
   challenge: Extract<PublicChallenge, { t: 'bucket' }>;
   onSubmit: (picks: { id: string; side: 'left' | 'right' }[]) => void;
+  onLock: () => void;
 }) {
   const [side, setSide] = useState<Record<string, 'left' | 'right'>>({});
   const [drag, setDrag] = useState<{ id: string; x: number } | null>(null);
   const done = you.submitted || locked;
   const placed = challenge.cards.filter((card) => side[card.id]);
   const pool = challenge.cards.filter((card) => !side[card.id]);
-  const ready = pool.length === 0;
 
   function put(id: string, next: 'left' | 'right') {
     if (done) return;
-    setSide((current) => ({ ...current, [id]: next }));
+    const picks = { ...side, [id]: next };
+    setSide(picks);
+    onSubmit(Object.entries(picks).map(([cardId, cardSide]) => ({ id: cardId, side: cardSide })));
   }
 
   return (
@@ -410,12 +467,16 @@ export function BucketBoard({
           </article>
         ))}
       </div>
+      <SaveHint done={you.submitted} />
       <button
         type="button"
         className="btn btn-red"
         data-testid="bucket-lock"
-        disabled={done || !ready}
-        onClick={() => onSubmit(challenge.cards.map((card) => ({ id: card.id, side: side[card.id] })))}
+        disabled={done || placed.length === 0}
+        onClick={() => {
+          onSubmit(Object.entries(side).map(([cardId, cardSide]) => ({ id: cardId, side: cardSide })));
+          onLock();
+        }}
       >
         {you.submitted ? 'Đã chốt' : 'Chốt hai phía'}
       </button>
@@ -428,12 +489,15 @@ export function RecruitBoard({
   you,
   locked,
   onSubmit,
-}: Common & { challenge: Extract<PublicChallenge, { t: 'recruit' }>; onSubmit: (ids: string[]) => void }) {
+  onLock,
+}: Common & { challenge: Extract<PublicChallenge, { t: 'recruit' }>; onSubmit: (ids: string[]) => void; onLock: () => void }) {
   const [ids, setIds] = useState<string[]>([]);
   const done = you.submitted || locked;
   function toggle(id: string) {
     if (done) return;
-    setIds((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]));
+    const next = ids.includes(id) ? ids.filter((item) => item !== id) : [...ids, id];
+    setIds(next);
+    onSubmit(next);
   }
   return (
     <div className="board-play">
@@ -452,7 +516,8 @@ export function RecruitBoard({
         ))}
       </div>
       <p className="hint">Đã chọn {ids.length}. Chọn nhầm sẽ bị trừ điểm.</p>
-      <button type="button" className="btn btn-red" data-testid="recruit-lock" disabled={done || ids.length === 0} onClick={() => onSubmit(ids)}>
+      <SaveHint done={you.submitted} />
+      <button type="button" className="btn btn-red" data-testid="recruit-lock" disabled={done || ids.length === 0} onClick={onLock}>
         {you.submitted ? 'Đã chốt mặt trận' : 'Chốt mặt trận'}
       </button>
     </div>

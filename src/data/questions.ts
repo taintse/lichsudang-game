@@ -85,6 +85,8 @@ export interface BetChallenge {
   t: 'bet';
   id: string;
   stageId: string;
+  /** Shown during the bet, before the question. */
+  topic: string;
   scenario: string;
   question: string;
   timeLimit: number;
@@ -273,6 +275,7 @@ export const CHALLENGES: Challenge[] = [
     t: 'bet',
     id: 'bet-boi-canh',
     stageId: 'baiHoc',
+    topic: 'Chủ đề: Bài học về bối cảnh',
     scenario: 'Muốn áp việc năm 1930 vào năm 1936.',
     question: 'Bài học nào đúng?',
     timeLimit: 12,
@@ -290,6 +293,7 @@ export const CHALLENGES: Challenge[] = [
     t: 'bet',
     id: 'bet-y-nghia',
     stageId: 'baiHoc',
+    topic: 'Chủ đề: Ý nghĩa thích ứng',
     scenario: 'Có người bảo thích ứng là đổi mục tiêu.',
     question: 'Cách hiểu nào đúng?',
     timeLimit: 12,
@@ -308,6 +312,7 @@ export const CHALLENGES: Challenge[] = [
     t: 'bet',
     id: 'bet-chia-khoa',
     stageId: 'baiHoc',
+    topic: 'Chủ đề: Bốn chìa khóa',
     scenario: 'Lớp chốt điều cần nhớ của giai đoạn.',
     question: 'Bốn chìa khóa là gì?',
     timeLimit: 12,

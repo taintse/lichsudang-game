@@ -1,9 +1,9 @@
 import { CHALLENGES } from '../data/questions';
 import { stageById, type StageMeta } from '../data/stages';
-import { BOARD_MS, INTRO_MS, REVEAL_MS } from '../data/timing';
+import { BET_WAGER_MS, BOARD_MS, INTRO_MS, REVEAL_MS } from '../data/timing';
 import { AVATAR_IDS, type ClientMessage, type Phase, type PublicChallenge, type PublicState, type RevealPublic, type YouState } from './types';
 import { cleanName, foldVi, fuzzyMatch } from './text';
-import { applyGrade, applyTwist, gradeAnswer, spentMs, type Pending } from './scoring';
+import { applyGrade, applyTwist, DEFAULT_WAGER_PCT, gradeAnswer, spentMs, stakeOf, type Pending } from './scoring';
 import { buildReveal, buildRound, debugKey, type DebugKey } from './present';
 
 const CAPITAL = 800;
@@ -111,6 +111,15 @@ function resetRound(player: Player) {
   player.lastResult = null;
 }
 
+function visibleChallenge(phase: Phase, challenge: PublicChallenge | null): PublicChallenge | null {
+  if (!challenge) return null;
+  if (phase !== 'wager' && phase !== 'play' && phase !== 'reveal' && phase !== 'board') return null;
+  if (phase === 'wager' && challenge.t === 'bet') {
+    return { ...challenge, question: '', scenario: '', options: [], timeLimit: BET_WAGER_MS / 1000 };
+  }
+  return challenge;
+}
+
 export class GameRoom {
   private state: HostState;
   private listeners = new Set<() => void>();
@@ -202,7 +211,7 @@ export class GameRoom {
   }
 
   private accepting(): boolean {
-    if (this.state.phase !== 'play' || this.state.paused) return false;
+    if (this.state.paused || (this.state.phase !== 'play' && this.state.phase !== 'wager')) return false;
     if (this.state.deadline == null) return false;
     return this.clock() <= this.state.deadline + GRACE_MS;
   }
@@ -228,12 +237,44 @@ export class GameRoom {
     const round = buildRound(challenge, stage.howTo, `${this.state.code}:${challenge.id}`);
     this.state.live = round;
     this.state.reveal = null;
-    this.state.phase = 'play';
     this.state.paused = false;
     this.state.pausedRemainingMs = null;
     this.state.challengeStartedAt = now;
-    this.state.deadline = now + challenge.timeLimit * 1000;
     for (const player of this.active()) resetRound(player);
+    if (challenge.t === 'bet') {
+      this.state.phase = 'wager';
+      this.state.deadline = now + BET_WAGER_MS;
+      return;
+    }
+    this.state.phase = 'play';
+    this.state.deadline = now + challenge.timeLimit * 1000;
+  }
+
+  /** Freeze the stake, then show the question. Unpicked stakes become 25%. */
+  private openQuestion() {
+    const challenge = this.currentChallenge();
+    if (!challenge || challenge.t !== 'bet') return;
+    const now = this.clock();
+    for (const player of this.active()) {
+      const pending = player.pending?.kind === 'bet' ? player.pending : null;
+      if (!pending || !pending.betSet) {
+        player.pending = {
+          kind: 'bet',
+          pct: DEFAULT_WAGER_PCT,
+          optionId: '',
+          at: now,
+          locked: false,
+          betSet: false,
+          usedDefault: true,
+        };
+      }
+      player.submitted = false;
+    }
+    this.state.phase = 'play';
+    this.state.challengeStartedAt = now;
+    this.state.deadline = now + challenge.timeLimit * 1000;
+    this.state.paused = false;
+    this.state.pausedRemainingMs = null;
   }
 
   private finalize() {
@@ -251,7 +292,7 @@ export class GameRoom {
       const late = !player.pending && player.joinedAt > startedAt + 800;
       if (late) {
         player.answerMs += timeLimitMs;
-        player.lastResult = { delta: 0, correct: false, note: 'Vào giữa chừng' };
+        player.lastResult = { delta: 0, correct: false, note: 'Vào giữa chừng', swing: 0 };
         continue;
       }
       player.answerMs += spentMs(player.pending, startedAt, timeLimitMs);
@@ -267,6 +308,7 @@ export class GameRoom {
         delta: applied.delta,
         correct: grade.perfect,
         note: grade.note,
+        swing: grade.wagerDelta,
       };
       player.submitted = true;
     }
@@ -381,6 +423,11 @@ export class GameRoom {
     if (phase === 'intro') {
       this.state.showCapitalNote = false;
       this.beginPlay();
+      this.emit();
+      return;
+    }
+    if (phase === 'wager') {
+      this.openQuestion();
       this.emit();
       return;
     }
@@ -536,12 +583,24 @@ export class GameRoom {
     if (!challenge || !live) return { broadcast: false, personal: false, kick: false };
     const now = this.clock();
 
+    if (message.t === 'lock') {
+      if (this.state.phase !== 'play') return { broadcast: false, personal: true, kick: false, error: 'Hãy chốt khi đã thấy câu hỏi.' };
+      if (player.submitted) return { broadcast: false, personal: true, kick: false };
+      player.submitted = true;
+      if (player.pending && player.pending.kind !== 'clues' && player.pending.kind !== 'map') {
+        player.pending.locked = true;
+        player.pending.at = now;
+        if (player.pending.kind === 'match') player.pending.doneAt = now;
+      }
+      this.emit();
+      return { broadcast: true, personal: true, kick: false };
+    }
+
     if (message.t === 'timeline' && challenge.t === 'timeline') {
       if (player.submitted) return { broadcast: false, personal: true, kick: false };
       const allowed = new Set(challenge.items.map((item) => item.id));
       const order = message.order.filter((id) => allowed.has(id));
-      player.pending = { kind: 'timeline', order, at: now };
-      player.submitted = true;
+      player.pending = { kind: 'timeline', order, at: now, locked: false };
       this.emit();
       return { broadcast: true, personal: true, kick: false };
     }
@@ -588,9 +647,10 @@ export class GameRoom {
     }
 
     if (message.t === 'match' && challenge.t === 'match') {
+      if (player.submitted) return { broadcast: false, personal: true, kick: false };
       if (!live.matchKey) return { broadcast: false, personal: false, kick: false };
       if (!player.pending || player.pending.kind !== 'match') {
-        player.pending = { kind: 'match', pairs: [], mistakes: 0, doneAt: null };
+        player.pending = { kind: 'match', pairs: [], mistakes: 0, doneAt: null, at: now, locked: false };
       }
       const pending = player.pending;
       if (pending.kind !== 'match') return { broadcast: false, personal: true, kick: false };
@@ -604,15 +664,13 @@ export class GameRoom {
       }
       if (live.matchKey[message.leftId] === message.rightId) {
         pending.pairs.push({ leftId: message.leftId, rightId: message.rightId });
+        pending.at = now;
         player.matchedPairs = pending.pairs.slice();
-        if (pending.pairs.length === challenge.pairs.length) {
-          pending.doneAt = now;
-          player.submitted = true;
-        }
         this.emit();
-        return { broadcast: player.submitted, personal: true, kick: false };
+        return { broadcast: true, personal: true, kick: false };
       }
       pending.mistakes += 1;
+      pending.at = now;
       player.mistakeSeq += 1;
       this.emit();
       return { broadcast: false, personal: true, kick: false };
@@ -629,8 +687,7 @@ export class GameRoom {
         seen.add(pick.id);
         picks.push({ id: pick.id, side: pick.side });
       }
-      player.pending = { kind: 'bucket', picks, at: now };
-      player.submitted = true;
+      player.pending = { kind: 'bucket', picks, at: now, locked: false };
       this.emit();
       return { broadcast: true, personal: true, kick: false };
     }
@@ -639,23 +696,39 @@ export class GameRoom {
       if (player.submitted) return { broadcast: false, personal: true, kick: false };
       const allowed = new Set(live.challenge.cards.map((card) => card.id));
       const ids = message.ids.filter((id) => allowed.has(id));
-      player.pending = { kind: 'recruit', ids: [...new Set(ids)], at: now };
-      player.submitted = true;
+      player.pending = { kind: 'recruit', ids: [...new Set(ids)], at: now, locked: false };
+      this.emit();
+      return { broadcast: true, personal: true, kick: false };
+    }
+
+    if (message.t === 'wager' && challenge.t === 'bet') {
+      if (this.state.phase !== 'wager') return { broadcast: false, personal: true, kick: false, error: 'Đã khóa mức cược.' };
+      const pct = Math.round(message.pct);
+      if (pct < DEFAULT_WAGER_PCT || pct > 100) {
+        return { broadcast: false, personal: true, kick: false, error: 'Mức cược từ 25% đến 100%.' };
+      }
+      const optionId = player.pending?.kind === 'bet' ? player.pending.optionId : '';
+      player.pending = { kind: 'bet', pct, optionId, at: now, locked: false, betSet: true, usedDefault: false };
       this.emit();
       return { broadcast: true, personal: true, kick: false };
     }
 
     if (message.t === 'bet' && challenge.t === 'bet') {
+      if (this.state.phase !== 'play') return { broadcast: false, personal: true, kick: false, error: 'Chưa tới lúc chọn đáp án.' };
       if (player.submitted) return { broadcast: false, personal: true, kick: false };
-      const allowed = new Set([0, 10, 25, 50, 100]);
-      if (!allowed.has(message.wagerPct)) {
-        return { broadcast: false, personal: true, kick: false, error: 'Mức cược không hợp lệ.' };
-      }
       if (!challenge.options.some((option) => option.id === message.optionId)) {
         return { broadcast: false, personal: true, kick: false, error: 'Hãy chọn một phương án.' };
       }
-      player.pending = { kind: 'bet', pct: message.wagerPct, optionId: message.optionId, at: now };
-      player.submitted = true;
+      const previous = player.pending?.kind === 'bet' ? player.pending : null;
+      player.pending = {
+        kind: 'bet',
+        pct: previous?.pct ?? DEFAULT_WAGER_PCT,
+        optionId: message.optionId,
+        at: now,
+        locked: false,
+        betSet: previous?.betSet ?? false,
+        usedDefault: previous?.usedDefault ?? !previous?.betSet,
+      };
       this.emit();
       return { broadcast: true, personal: true, kick: false };
     }
@@ -680,6 +753,8 @@ export class GameRoom {
         answerMs: player.answerMs ?? 0,
         connected: player.connected,
         submitted: player.submitted,
+        answered: player.pending != null || player.submitted,
+        wagerPct: player.pending?.kind === 'bet' ? player.pending.pct : null,
       }));
     return {
       code: this.state.code,
@@ -702,7 +777,7 @@ export class GameRoom {
             theme: stage.theme,
           }
         : null,
-      challenge: this.state.phase === 'play' || this.state.phase === 'reveal' || this.state.phase === 'board' ? this.state.live?.challenge ?? null : null,
+      challenge: visibleChallenge(this.state.phase, this.state.live?.challenge ?? null),
       reveal: this.state.phase === 'reveal' || this.state.phase === 'board' ? this.state.reveal : null,
       players,
       ceremonyStartedAt: this.state.ceremonyStartedAt,
@@ -715,6 +790,7 @@ export class GameRoom {
         this.state.challengePos + 1 < CHALLENGES.length &&
         CHALLENGES[this.state.challengePos].stageId !== CHALLENGES[this.state.challengePos + 1].stageId,
       finalNext: this.state.phase === 'board' && this.state.challengePos + 1 >= CHALLENGES.length,
+      allIn: this.active().filter((player) => player.pending?.kind === 'bet' && player.pending.pct === 100).length,
     };
   }
 
@@ -735,6 +811,8 @@ export class GameRoom {
       solved: player.solved,
       wrongGuesses: player.wrongGuesses,
       mapChoice: player.mapChoice ?? null,
+      wagerPct: player.pending?.kind === 'bet' ? player.pending.pct : null,
+      wagerStake: player.pending?.kind === 'bet' ? stakeOf(player.score, player.pending.pct) : null,
       lastResult: player.lastResult ? { ...player.lastResult } : null,
       kicked: player.kicked,
     };

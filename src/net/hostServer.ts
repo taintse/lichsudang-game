@@ -36,9 +36,13 @@ function parseClient(raw: unknown): ClientMessage | null {
   if (raw.t === 'match' && typeof raw.leftId === 'string' && typeof raw.rightId === 'string') {
     return { t: 'match', playerId, leftId: raw.leftId.slice(0, 16), rightId: raw.rightId.slice(0, 16) };
   }
-  if (raw.t === 'bet' && typeof raw.wagerPct === 'number' && typeof raw.optionId === 'string') {
-    return { t: 'bet', playerId, wagerPct: raw.wagerPct, optionId: raw.optionId.slice(0, 16) };
+  if (raw.t === 'bet' && typeof raw.optionId === 'string') {
+    return { t: 'bet', playerId, optionId: raw.optionId.slice(0, 16) };
   }
+  if (raw.t === 'wager' && typeof raw.pct === 'number') {
+    return { t: 'wager', playerId, pct: raw.pct };
+  }
+  if (raw.t === 'lock') return { t: 'lock', playerId };
   if (raw.t === 'bucket' && Array.isArray(raw.picks)) {
     const picks = raw.picks.filter(isRecord).slice(0, 8).map((pick) => ({
       id: String(pick.id ?? '').slice(0, 24),

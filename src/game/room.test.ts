@@ -3,7 +3,7 @@ import { GameRoom } from './room';
 import { CHALLENGES } from '../data/questions';
 import { scheduledRunMs, SESSION_LIMIT_MS } from '../data/timing';
 import { foldVi, fuzzyMatch } from './text';
-import { mapBand, orderStats } from './scoring';
+import { mapBand, orderStats, stakeOf } from './scoring';
 
 function setup() {
   let now = 1_700_000_000_000;
@@ -31,6 +31,7 @@ function answer(room: GameRoom, playerId: string, mode: 'perfect' | 'wrong') {
   if (key.t === 'timeline') {
     const order = mode === 'perfect' ? key.order! : [...key.order!].reverse();
     room.handleClient({ t: 'timeline', playerId, order });
+    room.handleClient({ t: 'lock', playerId });
   } else if (key.t === 'map' && challenge.t === 'map') {
     const wrong = challenge.markers.find((marker) => marker.id !== key.optionId)?.id ?? 'sai';
     room.handleClient({ t: 'map', playerId, choice: mode === 'perfect' ? key.optionId! : wrong });
@@ -39,20 +40,25 @@ function answer(room: GameRoom, playerId: string, mode: 'perfect' | 'wrong') {
   } else if (key.t === 'match' && challenge.t === 'match') {
     if (mode === 'perfect') {
       for (const pair of key.pairs!) room.handleClient({ t: 'match', playerId, leftId: pair.leftId, rightId: pair.rightId });
+      room.handleClient({ t: 'lock', playerId });
     } else {
       const left = challenge.left[0];
       const wrongRight = challenge.right.find((item) => item.id !== key.pairs!.find((pair) => pair.leftId === left.id)?.rightId);
       if (left && wrongRight) room.handleClient({ t: 'match', playerId, leftId: left.id, rightId: wrongRight.id });
+      room.handleClient({ t: 'lock', playerId });
     }
   } else if (key.t === 'bet' && challenge.t === 'bet') {
     const optionId = mode === 'perfect' ? key.optionId! : challenge.options.find((option) => option.id !== key.optionId)!.id;
-    room.handleClient({ t: 'bet', playerId, wagerPct: 100, optionId });
+    room.handleClient({ t: 'bet', playerId, optionId });
+    room.handleClient({ t: 'lock', playerId });
   } else if (key.t === 'bucket' && key.picks) {
     const picks = mode === 'perfect' ? key.picks : key.picks.map((pick) => ({ id: pick.id, side: pick.side === 'left' ? ('right' as const) : ('left' as const) }));
     room.handleClient({ t: 'bucket', playerId, picks });
+    room.handleClient({ t: 'lock', playerId });
   } else if (key.t === 'recruit' && key.ids) {
     const ids = mode === 'perfect' ? key.ids : [...key.ids.slice(0, 1), ...(key.wrongIds ?? [])];
     room.handleClient({ t: 'recruit', playerId, ids });
+    room.handleClient({ t: 'lock', playerId });
   }
 }
 
@@ -112,6 +118,11 @@ describe('phòng chơi', () => {
     }
     for (let i = 0; i < CHALLENGES.length; i++) {
       if (room.getState().phase === 'intro') room.next();
+      if (room.getState().phase === 'wager') {
+        room.handleClient({ t: 'wager', playerId: 'playerA1', pct: 100 });
+        room.handleClient({ t: 'wager', playerId: 'playerB1', pct: 100 });
+        room.next();
+      }
       expect(room.getState().phase).toBe('play');
       const betting = room.getState().live?.challenge.t === 'bet';
       answer(room, 'playerA1', betting ? 'wrong' : 'perfect');
@@ -176,7 +187,7 @@ describe('phòng chơi', () => {
       if (room.getState().phase === 'intro' && room.publicState().stage?.id === 'baiHoc') break;
       if (room.getState().phase === 'intro' || room.getState().phase === 'reveal' || room.getState().phase === 'board' || room.getState().phase === 'lobby') {
         room.next();
-      } else if (room.getState().phase === 'play') {
+      } else if (room.getState().phase === 'play' || room.getState().phase === 'wager') {
         room.next();
       }
     }
@@ -187,6 +198,69 @@ describe('phòng chơi', () => {
     room.handleClient({ t: 'join', playerId: 'playerC1', name: 'Chi', avatar: 'book' });
     expect(room.youState('playerC1')!.score).toBe(800);
     expect(room.youState('playerA1')!.score).toBe(before);
+  });
+
+  it('hết giờ chấm bản đã lưu, tốc độ chỉ khi chốt', () => {
+    const { room, setNow } = setup();
+    room.handleClient({ t: 'join', playerId: 'playerC1', name: 'Chi', avatar: 'book' });
+    room.next();
+    const started = room.getState().challengeStartedAt ?? 0;
+    const order = room.debugKey()!.order!;
+    const swapped = order.slice();
+    const first = swapped[0];
+    swapped[0] = swapped[1];
+    swapped[1] = first;
+    setNow(started + 1000);
+    room.handleClient({ t: 'timeline', playerId: 'playerA1', order });
+    room.handleClient({ t: 'lock', playerId: 'playerA1' });
+    setNow(started + 8000);
+    room.handleClient({ t: 'timeline', playerId: 'playerB1', order: swapped });
+    setNow(started + 20000);
+    room.next();
+    expect(room.getState().phase).toBe('reveal');
+    const an = room.youState('playerA1')!;
+    const binh = room.youState('playerB1')!;
+    const chi = room.youState('playerC1')!;
+    expect(an.score).toBeGreaterThan(1000);
+    expect(an.lastResult?.correct).toBe(true);
+    expect(binh.score).toBeGreaterThan(0);
+    expect(binh.score).toBeLessThan(1000);
+    expect(binh.lastResult?.correct).toBe(false);
+    expect(chi.score).toBe(0);
+    expect(chi.lastResult?.note).toBe('Chưa xếp');
+  });
+
+  it('cược trước câu hỏi, mặc định 25%, tính trên điểm thật', () => {
+    const { room } = setup();
+    expect(stakeOf(0, 25)).toBe(25);
+    expect(stakeOf(800, 100)).toBe(800);
+    while (room.getState().phase !== 'wager') {
+      if (room.getState().phase === 'play') room.next();
+      else room.next();
+    }
+    const hidden = JSON.stringify(room.publicState());
+    expect(hidden).not.toContain('Xét bối cảnh');
+    expect(room.publicState().challenge?.t).toBe('bet');
+    room.handleClient({ t: 'wager', playerId: 'playerA1', pct: 100 });
+    expect(room.publicState().allIn).toBe(1);
+    expect(room.youState('playerA1')!.wagerPct).toBe(100);
+    const score = room.youState('playerA1')!.score;
+    expect(room.youState('playerA1')!.wagerStake).toBe(stakeOf(score, 100));
+    room.next();
+    expect(room.getState().phase).toBe('play');
+    expect(room.youState('playerB1')!.wagerPct).toBe(25);
+    expect(room.publicState().players.find((player) => player.name === 'Bình')?.wagerPct).toBe(25);
+    const option = room.debugKey()!.optionId!;
+    room.handleClient({ t: 'bet', playerId: 'playerA1', optionId: option });
+    room.handleClient({ t: 'lock', playerId: 'playerA1' });
+    const live = room.publicState().challenge;
+    const wrong = live?.t === 'bet' ? live.options.find((item) => item.id !== option)!.id : '';
+    room.handleClient({ t: 'bet', playerId: 'playerB1', optionId: wrong });
+    room.next();
+    expect(room.youState('playerA1')!.lastResult?.swing).toBeGreaterThan(0);
+    expect(room.youState('playerB1')!.lastResult?.swing).toBeLessThan(0);
+    expect(room.youState('playerB1')!.lastResult?.note).toContain('Mặc định 25%');
+    expect(room.youState('playerA1')!.score).toBeGreaterThan(score);
   });
 
   it('hòa điểm thì người trả lời nhanh hơn xếp trên', () => {
