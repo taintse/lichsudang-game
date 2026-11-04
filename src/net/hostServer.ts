@@ -39,6 +39,17 @@ function parseClient(raw: unknown): ClientMessage | null {
   if (raw.t === 'bet' && typeof raw.wagerPct === 'number' && typeof raw.optionId === 'string') {
     return { t: 'bet', playerId, wagerPct: raw.wagerPct, optionId: raw.optionId.slice(0, 16) };
   }
+  if (raw.t === 'bucket' && Array.isArray(raw.picks)) {
+    const picks = raw.picks.filter(isRecord).slice(0, 8).map((pick) => ({
+      id: String(pick.id ?? '').slice(0, 24),
+      side: pick.side === 'right' ? ('right' as const) : ('left' as const),
+    }));
+    return { t: 'bucket', playerId, picks };
+  }
+  if (raw.t === 'recruit' && Array.isArray(raw.ids)) {
+    const ids = raw.ids.filter((id): id is string => typeof id === 'string').slice(0, 12).map((id) => id.slice(0, 24));
+    return { t: 'recruit', playerId, ids };
+  }
   return null;
 }
 

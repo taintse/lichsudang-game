@@ -2,10 +2,11 @@ import { useEffect, useRef, useState } from 'react';
 import { STAGES } from '../data/stages';
 import { sounds } from '../audio/sound';
 import type { PublicState } from '../game/types';
-import { ceremonyStep, remainingMs } from '../ui/clock';
+import { remainingMs } from '../ui/clock';
 import { Avatar, Grain, StageArt, Star } from '../components/art';
 import { MuteButton, TimerRing } from '../components/chrome';
-import { Leaderboard } from '../components/Leaderboard';
+import { Fireworks } from '../components/Fireworks';
+import { RankShow } from '../components/RankShow';
 import { Podium } from '../components/Podium';
 import { RevealCard } from '../components/RevealCard';
 
@@ -35,11 +36,24 @@ function nextLabel(pub: PublicState): string {
   if (pub.phase === 'play') return 'Hiện đáp án';
   if (pub.phase === 'reveal') return 'Bảng xếp hạng';
   if (pub.phase === 'board') {
-    if (pub.finalNext) return 'Lễ trao thưởng';
+    if (pub.finalNext) return 'Đến phần trao giải';
     if (pub.stageBreakNext) return 'Sang chặng mới';
     return 'Câu tiếp theo';
   }
+  if (pub.phase === 'gate') return 'Trao giải';
+  if (pub.phase === 'podium') {
+    if (pub.ceremonyStep <= 0) return 'Hạng ba';
+    if (pub.ceremonyStep === 1) return 'Hạng nhì';
+    if (pub.ceremonyStep === 2) return 'Hạng nhất';
+    if (pub.ceremonyStep === 3) return 'Bảng cuối';
+  }
   return 'Hiện đầy đủ';
+}
+
+function Twist({ event }: { event?: 'double' | 'spy' }) {
+  if (event === 'double') return <p className="twist">Thẻ sự kiện · Nhân đôi điểm</p>;
+  if (event === 'spy') return <p className="twist">Thẻ sự kiện · Mật thám: chọn nhầm bị trừ thêm</p>;
+  return null;
 }
 
 export function HostView({
@@ -66,12 +80,13 @@ export function HostView({
   const [ask, setAsk] = useState<'finish' | 'fresh' | 'leave' | null>(null);
   const [copied, setCopied] = useState(false);
   const [roster, setRoster] = useState(false);
+  const [top10, setTop10] = useState(false);
   const connected = pub.players.filter((player) => player.connected).length;
   const prevConnected = useRef(connected);
   const remain = remainingMs(pub, now);
   const total = (pub.challenge?.timeLimit ?? 0) * 1000;
-  const step = ceremonyStep(pub.ceremonyStartedAt, now);
-  const prevStep = useRef(0);
+  const step = pub.ceremonyStep;
+  const prevStep = useRef(-1);
   const second = Math.ceil(remain / 1000);
 
   useEffect(() => {
@@ -84,9 +99,19 @@ export function HostView({
   }, [second, pub.phase]);
 
   useEffect(() => {
-    if (pub.phase !== 'podium') return;
-    if (step >= 1 && prevStep.current < 1) sounds.fanfare();
-    if (step >= 3 && prevStep.current < 3) sounds.fanfare();
+    if (pub.phase !== 'podium') {
+      prevStep.current = -1;
+      return;
+    }
+    if (prevStep.current === step) return;
+    if (step === 0) {
+      sounds.fanfare();
+      sounds.drumroll();
+    } else if (step === 1 || step === 2) sounds.drumroll();
+    else if (step === 3) {
+      sounds.drumroll();
+      sounds.fanfare();
+    } else if (step >= 4) sounds.fanfare();
     prevStep.current = step;
   }, [step, pub.phase]);
 
@@ -212,6 +237,7 @@ export function HostView({
               <p className="eyebrow">{pub.stage?.kicker}</p>
               {pub.challenge.t === 'bet' && <p className="scenario host-scenario">{pub.challenge.scenario}</p>}
               <h1 data-testid="challenge-prompt">{pub.challenge.t === 'bet' ? pub.challenge.question : pub.challenge.prompt}</h1>
+              <Twist event={pub.challenge.event} />
               <p className="fine">Phương án chỉ hiện trên máy người chơi.</p>
               {pub.paused && <p className="pause-flag">Đang tạm dừng</p>}
             </div>
@@ -233,13 +259,30 @@ export function HostView({
 
         {pub.phase === 'board' && (
           <section>
-            <p className="eyebrow">Bảng xếp hạng</p>
+            <p className="eyebrow">Top 10</p>
             <h1>Ai đang dẫn?</h1>
-            <Leaderboard players={pub.players} />
+            <RankShow players={pub.players} />
           </section>
         )}
 
-        {pub.phase === 'podium' && <Podium players={pub.players} step={step} />}
+        {pub.phase === 'gate' && (
+          <section className="intro award-wait">
+            <p className="eyebrow">Hết thử thách</p>
+            <h1>Sẵn sàng trao giải</h1>
+            <p className="lead">Bấm Trao giải khi lớp đã yên. Pháo hoa mở màn, rồi hạng ba, hạng nhì, hạng nhất.</p>
+            <p className="tie-rule">Hòa điểm: người có tổng thời gian trả lời ngắn hơn xếp trên. Nếu vẫn hòa, người vào phòng trước xếp trên.</p>
+          </section>
+        )}
+
+        {pub.phase === 'podium' && (
+          <>
+            {step === 0 && <Fireworks mode="show" />}
+            {step === 1 || step === 2 ? <Fireworks mode="burst" /> : null}
+            {step === 3 && <Fireworks mode="grand" />}
+            {step === 0 && <p className="award-banner">Chúc mừng các chiến sĩ xuất sắc</p>}
+            <Podium players={pub.players} step={step} />
+          </>
+        )}
       </main>
 
       <ol className="rail" aria-label="Các chặng">
@@ -283,21 +326,31 @@ export function HostView({
                 onFinish();
               }}
             >
-              Trao thưởng ngay
+              Sang phần trao giải
             </button>
             <button type="button" className="btn ghost" onClick={() => setAsk(null)}>
               Huỷ
             </button>
           </>
         )}
-        {pub.phase === 'podium' && step < 4 && (
-          <button type="button" className="btn ghost" data-testid="host-next" onClick={onSkip}>
-            Hiện đầy đủ
+        {(pub.phase === 'intro' || pub.phase === 'reveal' || pub.phase === 'board' || pub.phase === 'gate') && (
+          <button type="button" className="btn" data-testid="show-top10" onClick={() => setTop10(true)}>
+            Bảng xếp hạng
           </button>
         )}
-        {pub.phase === 'podium' && ask === null && (
+        {pub.phase === 'podium' && step < 4 && (
           <>
-            <button type="button" className="btn btn-red" data-testid="end-replay" onClick={onReplay}>
+            <button type="button" className="btn btn-red" data-testid="host-next" onClick={onNext}>
+              {nextLabel(pub)}
+            </button>
+            <button type="button" className="btn ghost" onClick={onSkip}>
+              Hiện hết
+            </button>
+          </>
+        )}
+        {(pub.phase === 'gate' || (pub.phase === 'podium' && step >= 4)) && ask === null && (
+          <>
+            <button type="button" className={pub.phase === 'podium' ? 'btn btn-red' : 'btn ghost'} data-testid="end-replay" onClick={onReplay}>
               Chơi lại với người cũ
             </button>
             <button type="button" className="btn" data-testid="end-new" onClick={() => setAsk('fresh')}>
@@ -308,7 +361,7 @@ export function HostView({
             </button>
           </>
         )}
-        {pub.phase === 'podium' && ask === 'fresh' && (
+        {(pub.phase === 'podium' || pub.phase === 'gate') && ask === 'fresh' && (
           <>
             <button
               type="button"
@@ -326,7 +379,7 @@ export function HostView({
             </button>
           </>
         )}
-        {pub.phase === 'podium' && ask === 'leave' && (
+        {(pub.phase === 'podium' || pub.phase === 'gate') && ask === 'leave' && (
           <>
             <button
               type="button"
@@ -345,7 +398,12 @@ export function HostView({
           </>
         )}
         {pub.phase !== 'podium' && (
-          <button type="button" className="btn btn-red" data-testid="host-next" onClick={onNext}>
+          <button
+            type="button"
+            className={pub.phase === 'gate' ? 'btn btn-red award-cta' : 'btn btn-red'}
+            data-testid={pub.phase === 'gate' ? 'award-start' : 'host-next'}
+            onClick={onNext}
+          >
             {nextLabel(pub)}
           </button>
         )}
@@ -367,6 +425,18 @@ export function HostView({
         </aside>
       )}
       <p className="keyhint">Phím N: tiếp · Phím cách: tạm dừng</p>
+      {top10 && pub.phase !== 'play' && (
+        <div className="top10-modal" role="dialog" aria-label="Top 10">
+          <div className="top10-card">
+            <p className="eyebrow">Top 10</p>
+            <h2>Bảng xếp hạng</h2>
+            <RankShow players={pub.players} />
+            <button type="button" className="btn btn-red" onClick={() => setTop10(false)}>
+              Đóng
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

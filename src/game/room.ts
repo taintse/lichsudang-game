@@ -1,13 +1,17 @@
 import { CHALLENGES } from '../data/questions';
 import { stageById, type StageMeta } from '../data/stages';
+import { BOARD_MS, INTRO_MS, REVEAL_MS } from '../data/timing';
 import { AVATAR_IDS, type ClientMessage, type Phase, type PublicChallenge, type PublicState, type RevealPublic, type YouState } from './types';
 import { cleanName, foldVi, fuzzyMatch } from './text';
-import { applyGrade, gradeAnswer, type Pending } from './scoring';
+import { applyGrade, applyTwist, gradeAnswer, spentMs, type Pending } from './scoring';
 import { buildReveal, buildRound, debugKey, type DebugKey } from './present';
 
 const CAPITAL = 800;
 const MAX_PLAYERS = 60;
 const GRACE_MS = 400;
+const FIREWORKS_MS = 5200;
+const SPOT_MS = 4000;
+const FINALE_SPOT_MS = 5200;
 
 export interface Player {
   id: string;
@@ -17,6 +21,8 @@ export interface Player {
   combo: number;
   rank: number;
   prevRank: number;
+  prevScore: number;
+  answerMs: number;
   connected: boolean;
   kicked: boolean;
   joinedAt: number;
@@ -47,6 +53,7 @@ export interface HostState {
   pausedRemainingMs: number | null;
   challengePos: number;
   ceremonyStartedAt: number | null;
+  ceremonyStep: number;
   capitalGranted: boolean;
   showCapitalNote: boolean;
   players: Player[];
@@ -74,6 +81,8 @@ function blankPlayer(id: string, name: string, avatar: string, joinedAt: number)
     combo: 0,
     rank: 1,
     prevRank: 1,
+    prevScore: 0,
+    answerMs: 0,
     connected: true,
     kicked: false,
     joinedAt,
@@ -118,6 +127,7 @@ export class GameRoom {
       pausedRemainingMs: null,
       challengePos: -1,
       ceremonyStartedAt: null,
+      ceremonyStep: 0,
       capitalGranted: false,
       showCapitalNote: false,
       players: [],
@@ -130,6 +140,12 @@ export class GameRoom {
     };
     this.state.rev = this.state.rev || 0;
     this.state.restarted = !!this.state.restarted;
+    this.state.ceremonyStep = this.state.ceremonyStep || 0;
+    for (const player of this.state.players) {
+      player.prevScore = player.prevScore ?? player.score ?? 0;
+      player.answerMs = player.answerMs ?? 0;
+      player.prevRank = player.prevRank || player.rank || 1;
+    }
   }
 
   subscribe(fn: () => void): () => void {
@@ -159,14 +175,17 @@ export class GameRoom {
   }
 
   private recomputeRanks() {
-    const ranked = this.active().slice().sort((a, b) => b.score - a.score || a.joinedAt - b.joinedAt);
+    const ranked = this.active().slice().sort((a, b) => b.score - a.score || a.answerMs - b.answerMs || a.joinedAt - b.joinedAt);
     ranked.forEach((player, index) => {
       player.rank = index + 1;
     });
   }
 
   private snapshotRanks() {
-    for (const player of this.state.players) player.prevRank = player.rank || 1;
+    for (const player of this.state.players) {
+      player.prevRank = player.rank || 1;
+      player.prevScore = player.score;
+    }
   }
 
   private find(id: string): Player | undefined {
@@ -231,10 +250,16 @@ export class GameRoom {
       }
       const late = !player.pending && player.joinedAt > startedAt + 800;
       if (late) {
+        player.answerMs += timeLimitMs;
         player.lastResult = { delta: 0, correct: false, note: 'Vào giữa chừng' };
         continue;
       }
-      const grade = gradeAnswer(challenge, player.pending, timeLimitMs, startedAt, live.matchKey, player.score);
+      player.answerMs += spentMs(player.pending, startedAt, timeLimitMs);
+      const grade = applyTwist(
+        challenge,
+        gradeAnswer(challenge, player.pending, timeLimitMs, startedAt, live.matchKey, player.score),
+        player.pending != null,
+      );
       const applied = applyGrade(player.score, player.combo, grade);
       player.score = applied.score;
       player.combo = applied.combo;
@@ -249,7 +274,7 @@ export class GameRoom {
     this.state.reveal = buildReveal(challenge, mapCounts, live.matchKey);
     this.state.phase = 'reveal';
     this.state.paused = false;
-    this.state.deadline = null;
+    this.state.deadline = this.clock() + REVEAL_MS;
     this.state.pausedRemainingMs = null;
   }
 
@@ -259,35 +284,60 @@ export class GameRoom {
     this.state.showCapitalNote = false;
     this.state.restarted = false;
     this.state.phase = 'intro';
+    this.state.ceremonyStep = 0;
+    this.state.deadline = this.clock() + INTRO_MS;
     this.emit();
   }
 
   /** End the current round and open the podium with the scores people already have. */
   finishNow() {
-    if (this.state.phase === 'podium' || this.state.phase === 'lobby') return;
+    if (this.state.phase === 'podium' || this.state.phase === 'lobby' || this.state.phase === 'gate') return;
     if (this.state.phase === 'play') this.finalize();
-    this.state.phase = 'podium';
+    this.state.phase = 'gate';
     this.state.live = null;
     this.state.paused = false;
     this.state.deadline = null;
     this.state.pausedRemainingMs = null;
-    this.state.ceremonyStartedAt = this.clock();
+    this.emit();
+  }
+
+  /** Host pressed Trao giải. Fireworks first; ranks stay hidden until the host steps forward. */
+  startAwards() {
+    if (this.state.phase !== 'gate') return;
+    const now = this.clock();
+    this.state.phase = 'podium';
+    this.state.ceremonyStep = 0;
+    this.state.ceremonyStartedAt = now;
+    this.state.deadline = now + FIREWORKS_MS;
+    this.state.paused = false;
+    this.emit();
+  }
+
+  /** Reveal the next place, or the final table. */
+  advanceCeremony() {
+    if (this.state.phase !== 'podium' || this.state.ceremonyStep >= 4) return;
+    this.state.ceremonyStep += 1;
+    if (this.state.ceremonyStep >= 4) this.state.deadline = null;
+    else this.state.deadline = this.clock() + (this.state.ceremonyStep === 3 ? FINALE_SPOT_MS : SPOT_MS);
     this.emit();
   }
 
   /** Same room, same players, scores back to zero, lobby. */
   replay() {
-    if (this.state.phase !== 'podium') return;
+    if (this.state.phase !== 'podium' && this.state.phase !== 'gate') return;
     for (const player of this.active()) {
       player.score = 0;
       player.combo = 0;
       player.gotCapital = false;
       player.prevRank = player.rank;
+      player.prevScore = 0;
+      player.answerMs = 0;
       resetRound(player);
     }
     this.state.phase = 'lobby';
     this.state.challengePos = -1;
     this.state.ceremonyStartedAt = null;
+    this.state.ceremonyStep = 0;
     this.state.capitalGranted = false;
     this.state.showCapitalNote = false;
     this.state.paused = false;
@@ -309,6 +359,7 @@ export class GameRoom {
     this.state.phase = 'lobby';
     this.state.challengePos = -1;
     this.state.ceremonyStartedAt = null;
+    this.state.ceremonyStep = 0;
     this.state.capitalGranted = false;
     this.state.showCapitalNote = false;
     this.state.paused = false;
@@ -340,15 +391,17 @@ export class GameRoom {
     }
     if (phase === 'reveal') {
       this.state.phase = 'board';
+      this.state.deadline = this.clock() + BOARD_MS;
       this.emit();
       return;
     }
     if (phase === 'board') {
       const nextPos = this.state.challengePos + 1;
       if (nextPos >= CHALLENGES.length) {
-        this.state.phase = 'podium';
-        this.state.ceremonyStartedAt = this.clock();
+        this.state.phase = 'gate';
+        this.state.deadline = null;
         this.state.live = null;
+        this.state.paused = false;
         this.emit();
         return;
       }
@@ -357,8 +410,9 @@ export class GameRoom {
       this.state.challengePos = nextPos;
       if (nextStage !== prevStage) {
         this.state.showCapitalNote = false;
-        if (nextStage === 'doimoi') this.grantCapital();
+        if (nextStage === 'baiHoc') this.grantCapital();
         this.state.phase = 'intro';
+        this.state.deadline = this.clock() + INTRO_MS;
         this.state.live = null;
         this.state.reveal = null;
       } else {
@@ -367,7 +421,7 @@ export class GameRoom {
       this.emit();
       return;
     }
-    if (phase === 'podium') this.skipCeremony();
+    if (phase === 'podium') this.advanceCeremony();
   }
 
   pause() {
@@ -391,7 +445,9 @@ export class GameRoom {
 
   skipCeremony() {
     if (this.state.phase !== 'podium') return;
-    this.state.ceremonyStartedAt = this.clock() - 20000;
+    this.state.ceremonyStep = 4;
+    this.state.deadline = null;
+    this.state.ceremonyStartedAt = this.clock();
     this.emit();
   }
 
@@ -562,6 +618,33 @@ export class GameRoom {
       return { broadcast: false, personal: true, kick: false };
     }
 
+    if (message.t === 'bucket' && challenge.t === 'bucket' && live.challenge.t === 'bucket') {
+      if (player.submitted) return { broadcast: false, personal: true, kick: false };
+      const allowed = new Set(live.challenge.cards.map((card) => card.id));
+      const seen = new Set<string>();
+      const picks: { id: string; side: 'left' | 'right' }[] = [];
+      for (const pick of message.picks) {
+        if (!allowed.has(pick.id) || seen.has(pick.id)) continue;
+        if (pick.side !== 'left' && pick.side !== 'right') continue;
+        seen.add(pick.id);
+        picks.push({ id: pick.id, side: pick.side });
+      }
+      player.pending = { kind: 'bucket', picks, at: now };
+      player.submitted = true;
+      this.emit();
+      return { broadcast: true, personal: true, kick: false };
+    }
+
+    if (message.t === 'recruit' && challenge.t === 'recruit' && live.challenge.t === 'recruit') {
+      if (player.submitted) return { broadcast: false, personal: true, kick: false };
+      const allowed = new Set(live.challenge.cards.map((card) => card.id));
+      const ids = message.ids.filter((id) => allowed.has(id));
+      player.pending = { kind: 'recruit', ids: [...new Set(ids)], at: now };
+      player.submitted = true;
+      this.emit();
+      return { broadcast: true, personal: true, kick: false };
+    }
+
     if (message.t === 'bet' && challenge.t === 'bet') {
       if (player.submitted) return { broadcast: false, personal: true, kick: false };
       const allowed = new Set([0, 10, 25, 50, 100]);
@@ -593,6 +676,8 @@ export class GameRoom {
         combo: player.combo,
         rank: player.rank,
         prevRank: player.prevRank,
+        prevScore: player.prevScore ?? 0,
+        answerMs: player.answerMs ?? 0,
         connected: player.connected,
         submitted: player.submitted,
       }));
@@ -621,6 +706,7 @@ export class GameRoom {
       reveal: this.state.phase === 'reveal' || this.state.phase === 'board' ? this.state.reveal : null,
       players,
       ceremonyStartedAt: this.state.ceremonyStartedAt,
+      ceremonyStep: this.state.ceremonyStep || 0,
       rev: this.state.rev || 0,
       restarted: !!this.state.restarted,
       capitalNote: this.state.showCapitalNote && this.state.phase === 'intro',
@@ -655,7 +741,7 @@ export class GameRoom {
   }
 
   debugKey(): DebugKey | null {
-    if (this.state.phase === 'lobby' || this.state.phase === 'podium') return null;
+    if (this.state.phase === 'lobby' || this.state.phase === 'podium' || this.state.phase === 'gate') return null;
     const key = debugKey(this.state.challengePos, this.state.live?.matchKey ?? null);
     if (key?.t === 'map' && this.state.live?.answerId) return { ...key, optionId: this.state.live.answerId };
     return key;

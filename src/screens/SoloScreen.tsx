@@ -8,6 +8,7 @@ import { cleanName } from '../game/text';
 import { Avatar, Grain, Star } from '../components/art';
 import { HostView } from './HostView';
 import { PlayerView, useNow } from './PlayerView';
+import { useAutoAdvance } from '../ui/autoplay';
 
 const PLAYER_ID = 'soloplus01';
 
@@ -27,6 +28,8 @@ export function SoloScreen() {
     setVersion(1);
     return room.subscribe(() => setVersion((value) => value + 1));
   }, []);
+
+  useAutoAdvance(roomRef);
 
   const room = roomRef.current;
   void version;
@@ -105,7 +108,10 @@ export function SoloScreen() {
           mode="solo"
           onNext={() => {
             sounds.unlock();
-            room.next();
+            const phase = room.getState().phase;
+            if (phase === 'gate') room.startAwards();
+            else if (phase === 'podium') room.advanceCeremony();
+            else room.next();
           }}
           onPause={() => room.pause()}
           onResume={() => room.resume()}
@@ -130,6 +136,8 @@ export function SoloScreen() {
             onClue={(text) => room.handleClient({ t: 'clue', playerId: PLAYER_ID, text })}
             onMatch={(leftId, rightId) => room.handleClient({ t: 'match', playerId: PLAYER_ID, leftId, rightId })}
             onBet={(wagerPct, optionId) => room.handleClient({ t: 'bet', playerId: PLAYER_ID, wagerPct, optionId })}
+            onBucket={(picks) => room.handleClient({ t: 'bucket', playerId: PLAYER_ID, picks })}
+            onRecruit={(ids) => room.handleClient({ t: 'recruit', playerId: PLAYER_ID, ids })}
           />
         </div>
       </div>

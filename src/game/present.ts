@@ -33,6 +33,10 @@ function sid(rand: () => number): string {
   return 'r' + Math.floor(rand() * 1e9).toString(36);
 }
 
+function eventOf(challenge: { event?: 'double' | 'spy' }): { event?: 'double' | 'spy' } {
+  return challenge.event ? { event: challenge.event } : {};
+}
+
 export interface BuiltRound {
   challenge: PublicChallenge;
   /** For match: left id → shuffled right id. For map: public marker id → option id. */
@@ -56,6 +60,7 @@ export function buildRound(challenge: Challenge, howTo: string, seed: string): B
           challenge.items.map((item) => ({ id: item.id, text: item.text })),
           rand,
         ),
+        ...eventOf(challenge),
       },
       answerId: null,
     };
@@ -118,8 +123,47 @@ export function buildRound(challenge: Challenge, howTo: string, seed: string): B
           rand,
         ),
         right: shuffle(right, rand),
+        ...eventOf(challenge),
       },
       answerId: null,
+    };
+  }
+  if (challenge.t === 'bucket') {
+    return {
+      matchKey: null,
+      answerId: null,
+      challenge: {
+        t: 'bucket',
+        id: challenge.id,
+        prompt: challenge.prompt,
+        timeLimit: challenge.timeLimit,
+        howTo,
+        leftLabel: challenge.leftLabel,
+        rightLabel: challenge.rightLabel,
+        cards: shuffle(
+          challenge.cards.map((card) => ({ id: card.id, text: card.text })),
+          rand,
+        ),
+        ...eventOf(challenge),
+      },
+    };
+  }
+  if (challenge.t === 'recruit') {
+    return {
+      matchKey: null,
+      answerId: null,
+      challenge: {
+        t: 'recruit',
+        id: challenge.id,
+        prompt: challenge.prompt,
+        timeLimit: challenge.timeLimit,
+        howTo,
+        cards: shuffle(
+          challenge.cards.map((card) => ({ id: card.id, text: card.text })),
+          rand,
+        ),
+        ...eventOf(challenge),
+      },
     };
   }
   return {
@@ -135,6 +179,7 @@ export function buildRound(challenge: Challenge, howTo: string, seed: string): B
         challenge.options.map((option) => ({ id: option.id, text: option.text })),
         rand,
       ),
+      ...eventOf(challenge),
     },
     answerId: null,
   };
@@ -180,6 +225,23 @@ export function buildReveal(
       pairs: challenge.pairs.map((pair) => ({ left: pair.left, right: pair.right })),
     };
   }
+  if (challenge.t === 'bucket') {
+    return {
+      headline: challenge.headline,
+      explanation: challenge.explanation,
+      cards: challenge.cards.map((card) => ({
+        text: card.text,
+        side: card.bucket === 'left' ? challenge.leftLabel : challenge.rightLabel,
+      })),
+    };
+  }
+  if (challenge.t === 'recruit') {
+    return {
+      headline: challenge.headline,
+      explanation: challenge.explanation,
+      cards: challenge.cards.map((card) => ({ text: card.text, side: card.ok ? 'Đưa vào mặt trận' : 'Không đưa vào' })),
+    };
+  }
   return { headline: challenge.headline, explanation: challenge.explanation };
 }
 
@@ -202,6 +264,9 @@ export interface DebugKey {
   answer?: string;
   pairs?: { leftId: string; rightId: string }[];
   optionId?: string;
+  picks?: { id: string; side: 'left' | 'right' }[];
+  ids?: string[];
+  wrongIds?: string[];
 }
 
 export function debugKey(pos: number, matchKey: Record<string, string> | null): DebugKey | null {
@@ -226,6 +291,21 @@ export function debugKey(pos: number, matchKey: Record<string, string> | null): 
       t: 'match',
       id: challenge.id,
       pairs: challenge.pairs.map((pair) => ({ leftId: pair.id, rightId: matchKey?.[pair.id] ?? '' })),
+    };
+  }
+  if (challenge.t === 'bucket') {
+    return {
+      t: 'bucket',
+      id: challenge.id,
+      picks: challenge.cards.map((card) => ({ id: card.id, side: card.bucket })),
+    };
+  }
+  if (challenge.t === 'recruit') {
+    return {
+      t: 'recruit',
+      id: challenge.id,
+      ids: challenge.cards.filter((card) => card.ok).map((card) => card.id),
+      wrongIds: challenge.cards.filter((card) => !card.ok).map((card) => card.id),
     };
   }
   return { t: 'bet', id: challenge.id, optionId: challenge.correctId };

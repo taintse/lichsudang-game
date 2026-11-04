@@ -16,7 +16,10 @@ import '@fontsource/source-serif-4/latin-700.css';
 import '@fontsource/source-serif-4/vietnamese-600.css';
 import '@fontsource/source-serif-4/vietnamese-700.css';
 
-window.addEventListener('pointerdown', () => sounds.unlock(), { passive: true });
+const unlock = () => sounds.unlock();
+window.addEventListener('pointerdown', unlock, { passive: true });
+window.addEventListener('touchstart', unlock, { passive: true });
+window.addEventListener('keydown', unlock);
 
 const root = document.getElementById('root');
 if (!root) throw new Error('Không tìm thấy #root');
