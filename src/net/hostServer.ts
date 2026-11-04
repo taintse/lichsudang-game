@@ -73,7 +73,7 @@ export class HostServer {
     this.destroyed = false;
     this.code = code;
     this.topics = roomTopics(code);
-    this.onChange({ status: 'connecting', debug: 'Đang mở kênh mạng…' });
+    this.onChange({ status: 'connecting' });
     const relay = new Relay(() => this.report());
     this.relay = relay;
     relay.start((topic, payload) => this.onWire(topic, payload));
@@ -82,8 +82,8 @@ export class HostServer {
       if (this.destroyed || this.relay?.openIds.length) return;
       this.onChange({
         status: 'error',
-        error: 'Không mở được kênh mạng. Kiểm tra internet của máy chiếu rồi bấm thử lại.',
-        debug: 'Chưa nối HiveMQ hay EMQX',
+        error: 'Không mở được phòng. Kiểm tra internet của máy chiếu rồi bấm thử lại.',
+        debug: 'Chưa nối được mạng',
       });
     }, 12000);
   }
@@ -124,11 +124,11 @@ export class HostServer {
       if (this.stall) window.clearTimeout(this.stall);
       this.stall = null;
       if (!this.heartbeat) this.heartbeat = window.setInterval(() => this.queue(true), 2000);
-      this.onChange({ status: 'open', debug: 'Kênh ' + open.join(' + ') + ' · người chơi mạng khác vẫn vào được' });
+      this.onChange({ status: 'open' });
       this.queue(true);
       return;
     }
-    this.onChange({ status: 'connecting', debug: 'Đang nối lại kênh mạng…' });
+    this.onChange({ status: 'connecting' });
   }
 
   private onWire(topic: string, payload: string) {

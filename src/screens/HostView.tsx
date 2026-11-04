@@ -27,7 +27,6 @@ interface Props {
   onNewRoom: () => void;
   onHome: () => void;
   onFinish: () => void;
-  debug?: string;
 }
 
 function nextLabel(pub: PublicState): string {
@@ -73,7 +72,6 @@ export function HostView({
   onNewRoom,
   onHome,
   onFinish,
-  debug,
 }: Props) {
   const theme = pub.phase === 'podium' ? 'podium' : (pub.stage?.theme ?? 'flame');
   const [confirm, setConfirm] = useState<string | null>(null);
@@ -188,12 +186,6 @@ export function HostView({
               >
                 {copied ? 'Đã chép liên kết' : 'Chép liên kết'}
               </button>
-              <p className="fine">Giữ tab này luôn mở. Máy chiếu chính là máy chủ của phòng. Điện thoại mạng khác vẫn vào được.</p>
-              {debug && (
-                <p className="fine" data-testid="net-debug">
-                  {debug}
-                </p>
-              )}
             </div>
             <div className="roster">
               <h2>

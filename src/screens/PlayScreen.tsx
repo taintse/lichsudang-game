@@ -175,11 +175,6 @@ export function PlayScreen() {
               Vào lớp
             </button>
             {live && <p className="notice">{net.detail || 'Đang nối vào máy chiếu…'}</p>}
-            {live && net.debug && (
-              <p className="fine" data-testid="net-debug">
-                {net.debug}
-              </p>
-            )}
             {live && net.stalled && (
               <button
                 type="button"
@@ -202,7 +197,7 @@ export function PlayScreen() {
   return (
     <>
       {toast && <p className="toast">{toast}</p>}
-      {net.status === 'connecting' && <p className="toast">{[net.detail || 'Đang nối lại…', net.debug].filter(Boolean).join(' · ')}</p>}
+      {net.status === 'connecting' && <p className="toast">{net.detail || 'Đang nối lại…'}</p>}
       <PlayerView
         pub={pub}
         you={you}

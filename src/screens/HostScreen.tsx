@@ -133,7 +133,7 @@ export function HostScreen() {
       qr={qr}
       now={now}
       mode="live"
-      notice={notice.status === 'open' ? undefined : notice.error || notice.debug || 'Đang nối kênh mạng…'}
+      notice={notice.error}
       onNext={() => {
         sounds.unlock();
         const phase = room.getState().phase;
@@ -161,7 +161,6 @@ export function HostScreen() {
         clearHostSave();
         window.setTimeout(() => nav('/'), 400);
       }}
-      debug={notice.debug}
     />
   );
 }
