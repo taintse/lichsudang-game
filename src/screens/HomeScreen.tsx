@@ -45,7 +45,9 @@ export function HomeScreen() {
         <section className="rules">
           <h2>Luật tính điểm</h2>
           <ul>
-            <li>Đúng và nhanh được nhiều điểm hơn.</li>
+            <li>Máy tự lưu mỗi thao tác. Hết giờ vẫn chấm bản đã lưu. Chưa làm gì thì 0 điểm.</li>
+            <li>Bấm Chốt khi xong sớm để lấy điểm tốc độ. Không chốt thì vẫn được điểm nội dung, không có thưởng tốc độ.</li>
+            <li>Chặng cuối đặt cược trước khi thấy câu. Chưa chọn thì mặc định 25% điểm đang có.</li>
             <li>Đúng liên tiếp thì có chuỗi combo, tối đa ×1,6.</li>
             <li>Chặng cuối được cược điểm: đúng thì được cộng phần đã cược, sai thì mất phần đó.</li>
             <li>Hòa điểm thì người có tổng thời gian trả lời ngắn hơn xếp trên.</li>

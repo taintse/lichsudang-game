@@ -42,4 +42,6 @@ Mỗi câu chỉ còn 4 thẻ hoặc 4 phương án, chữ trên thẻ không qu
 
 ## Ngân sách thời gian
 
-5 lời giới thiệu × 7 giây + 138 giây trả lời + 11 × (10 giây đáp án + 6 giây bảng) = 349 giây, khoảng 5 phút 49 giây, dưới 12 phút. Không có đồng hồ tổng. Lễ trao giải chỉ chạy khi giảng viên bấm Trao giải.
+5 lời giới thiệu × 7 giây + 3 lần đặt cược × 8 giây + 138 giây trả lời + 11 × (10 giây đáp án + 6 giây bảng) = 373 giây, khoảng 6 phút 13 giây, dưới 12 phút. Không có đồng hồ tổng.
+
+Cược dùng điểm thật đang có, không dùng riêng 800 điểm vốn. Chưa chọn mức thì mặc định 25%. Người dưới 100 điểm vẫn cược trên mức sàn 100. Điểm tốc độ chỉ cộng khi bấm Chốt và câu hoàn hảo. Hết giờ vẫn chấm bản đã tự lưu. Không đụng vào câu thì 0 điểm.

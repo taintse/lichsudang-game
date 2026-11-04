@@ -7,6 +7,7 @@ import { CHALLENGES } from './questions';
 export const INTRO_MS = 7_000;
 export const REVEAL_MS = 10_000;
 export const BOARD_MS = 6_000;
+export const BET_WAGER_MS = 8_000;
 export const SESSION_LIMIT_MS = 12 * 60 * 1000;
 
 export function introCount(): number {
@@ -24,5 +25,6 @@ export function introCount(): number {
 /** Milliseconds from the first stage card to the award gate, if nobody skips. */
 export function scheduledRunMs(): number {
   const answerMs = CHALLENGES.reduce((sum, challenge) => sum + challenge.timeLimit * 1000, 0);
-  return introCount() * INTRO_MS + answerMs + CHALLENGES.length * (REVEAL_MS + BOARD_MS);
+  const wagers = CHALLENGES.filter((challenge) => challenge.t === 'bet').length * BET_WAGER_MS;
+  return introCount() * INTRO_MS + wagers + answerMs + CHALLENGES.length * (REVEAL_MS + BOARD_MS);
 }

@@ -1,7 +1,7 @@
 import type { PublicState } from '../game/types';
 
 export function remainingMs(pub: PublicState, now: number): number {
-  if (pub.phase !== 'play') return 0;
+  if (pub.phase !== 'play' && pub.phase !== 'wager') return 0;
   if (pub.paused) return pub.pausedRemainingMs ?? 0;
   if (pub.deadline == null) return 0;
   return Math.max(0, pub.deadline - now);

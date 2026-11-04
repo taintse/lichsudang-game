@@ -28,7 +28,7 @@ export const STAGES: StageMeta[] = [
     kicker: 'Chặng 2 · Chia hai phía',
     blurb:
       'Nhiệm vụ trước mắt đổi, mục tiêu lâu dài thì không bỏ. Đưa mỗi khẩu hiệu về đúng thời kỳ hoặc đúng cách hiểu.',
-    howTo: 'Đưa mỗi thẻ sang trái hoặc phải. Chốt khi đã xếp hết.',
+    howTo: 'Đưa mỗi thẻ sang trái hoặc phải. Máy tự lưu. Chốt nếu xong sớm.',
     theme: 'autumn',
   },
   {
@@ -38,7 +38,7 @@ export const STAGES: StageMeta[] = [
     kicker: 'Chặng 3 · Chiêu mộ',
     blurb:
       'Không chỉ công nhân và nông dân. Hãy tập hợp những người có chung yêu cầu dân sinh, dân chủ, hòa bình.',
-    howTo: 'Chạm để đưa vào mặt trận. Chọn nhầm sẽ bị trừ. Bấm lại để bỏ ra trước khi chốt.',
+    howTo: 'Chạm để đưa vào mặt trận. Chọn nhầm sẽ bị trừ. Máy tự lưu.',
     theme: 'dbp',
   },
   {
@@ -58,7 +58,7 @@ export const STAGES: StageMeta[] = [
     kicker: 'Chặng 5 · Đặt cược',
     blurb:
       'Bốn bài học và lời kết. Mỗi người được thêm 800 điểm vốn. Cược đúng thì được cộng đúng phần đã cược, cược sai thì mất.',
-    howTo: 'Chọn mức cược và một phương án rồi chốt. Đúng được cộng phần cược. Sai mất phần cược.',
+    howTo: 'Đặt cược trước, rồi mới thấy câu. Đúng được cộng khoản cược, sai thì mất.',
     theme: 'doimoi',
   },
 ];

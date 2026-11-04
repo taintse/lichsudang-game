@@ -365,7 +365,20 @@ h1 { font-size: clamp(2rem, 5vw, 4.4rem); margin: 0.15em 0; font-weight: 900; }
 .opt, .tile { width: 100%; text-align: left; padding: 10px 12px; line-height: 1.35; }
 .opt.on, .tile.on, .chip.on, .avatar-btn.on { background: var(--gold); }
 .tile.locked { background: #e7f6ea; }
-.options, .wagers, .cols { display: grid; gap: 8px; }
+.options { display: grid; gap: 8px; }
+.wagers { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.cols { display: grid; gap: 8px; }
+.slider-line { display: grid; gap: 6px; font-weight: 800; }
+.slider-line input { width: 100%; min-height: 44px; }
+.stake-pop { display: block; font-size: 2.2rem; font-weight: 900; }
+.stake-pop.win { color: var(--good); animation: stake-pop 0.7s ease; }
+.stake-pop.lose { color: var(--bad); animation: stake-pop 0.7s ease; }
+@keyframes stake-pop {
+  0% { transform: scale(0.6); opacity: 0; }
+  70% { transform: scale(1.12); }
+  100% { transform: scale(1); opacity: 1; }
+}
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 .cols { grid-template-columns: 1fr 1fr; align-items: start; }
 .col-title { margin: 0 0 4px; font-size: 0.85rem; font-weight: 800; color: var(--band); letter-spacing: 0; }
 .typed { display: flex; gap: 8px; }
@@ -691,7 +704,7 @@ h1 { font-size: clamp(2rem, 5vw, 4.4rem); margin: 0.15em 0; font-weight: 900; }
   padding: 16px;
 }
 @media (prefers-reduced-motion: reduce) {
-  .fireworks, .award-banner { animation: none; }
+  .fireworks, .award-banner, .stake-pop { animation: none; }
   .pedestal.lit.spot .winner { box-shadow: 0 0 0 4px #f0c14a; }
 }
 .wait-line { font-family: var(--serif); font-size: 1.4rem; }

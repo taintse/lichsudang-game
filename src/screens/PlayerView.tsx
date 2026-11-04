@@ -6,7 +6,7 @@ import { formatPoints } from '../game/text';
 import { elapsedMs, remainingMs } from '../ui/clock';
 import { Avatar, Grain, Star } from '../components/art';
 import { MuteButton, TimerRing } from '../components/chrome';
-import { BetBoard, BucketBoard, ClueBoard, MapBoard, MatchBoard, RecruitBoard, TimelineBoard } from '../components/boards';
+import { BetBoard, BucketBoard, ClueBoard, MapBoard, MatchBoard, RecruitBoard, TimelineBoard, WagerBoard } from '../components/boards';
 import { Leaderboard } from '../components/Leaderboard';
 import { Podium } from '../components/Podium';
 import { RevealCard } from '../components/RevealCard';
@@ -19,9 +19,11 @@ interface Props {
   onMap: (choice: string) => void;
   onClue: (text: string) => void;
   onMatch: (leftId: string, rightId: string) => void;
-  onBet: (pct: number, optionId: string) => void;
+  onBet: (optionId: string) => void;
   onBucket: (picks: { id: string; side: 'left' | 'right' }[]) => void;
   onRecruit: (ids: string[]) => void;
+  onWager: (pct: number) => void;
+  onLock: () => void;
 }
 
 function useResultSound(pub: PublicState, you: YouState) {
@@ -44,7 +46,7 @@ function buzz(ok: boolean) {
   if (typeof nav.vibrate === 'function') nav.vibrate(ok ? [16, 28, 16] : [36]);
 }
 
-export function PlayerView({ pub, you, now, onTimeline, onMap, onClue, onMatch, onBet, onBucket, onRecruit }: Props) {
+export function PlayerView({ pub, you, now, onTimeline, onMap, onClue, onMatch, onBet, onBucket, onRecruit, onWager, onLock }: Props) {
   const theme = pub.phase === 'podium' ? 'podium' : (pub.stage?.theme ?? 'flame');
   const remain = remainingMs(pub, now);
   const elapsed = elapsedMs(pub, now);
@@ -108,6 +110,19 @@ export function PlayerView({ pub, you, now, onTimeline, onMap, onClue, onMatch, 
             {pub.capitalNote && <p className="capital">Bạn được cấp thêm 800 điểm vốn để mang ra cược.</p>}
           </section>
         )}
+        {pub.phase === 'wager' && pub.challenge?.t === 'bet' && (
+          <section>
+            <div className="play-top">
+              <p className="eyebrow">Đặt cược</p>
+              <TimerRing ms={remain} total={total} />
+            </div>
+            <h1 className="q" data-testid="wager-topic">
+              {pub.challenge.topic}
+            </h1>
+            <p className="howto">Chọn mức cược trước khi thấy câu hỏi.</p>
+            <WagerBoard you={you} onPick={onWager} />
+          </section>
+        )}
         {pub.phase === 'play' && pub.challenge && (
           <section>
             <div className="play-top">
@@ -136,6 +151,7 @@ export function PlayerView({ pub, you, now, onTimeline, onMap, onClue, onMatch, 
               onBet={onBet}
               onBucket={onBucket}
               onRecruit={onRecruit}
+              onLock={onLock}
             />
           </section>
         )}
@@ -193,18 +209,19 @@ function PlaySwitch(props: {
   onMap: (choice: string) => void;
   onClue: (text: string) => void;
   onMatch: (leftId: string, rightId: string) => void;
-  onBet: (pct: number, optionId: string) => void;
+  onBet: (optionId: string) => void;
   onBucket: (picks: { id: string; side: 'left' | 'right' }[]) => void;
   onRecruit: (ids: string[]) => void;
+  onLock: () => void;
 }) {
   const { challenge, you, locked } = props;
-  if (challenge.t === 'timeline') return <TimelineBoard challenge={challenge} you={you} locked={locked} onSubmit={props.onTimeline} />;
+  if (challenge.t === 'timeline') return <TimelineBoard challenge={challenge} you={you} locked={locked} onSubmit={props.onTimeline} onLock={props.onLock} />;
   if (challenge.t === 'map') return <MapBoard challenge={challenge} you={you} locked={locked} onSubmit={props.onMap} />;
   if (challenge.t === 'clues') return <ClueBoard challenge={challenge} you={you} locked={locked} elapsed={props.elapsed} onSubmit={props.onClue} />;
-  if (challenge.t === 'match') return <MatchBoard challenge={challenge} you={you} locked={locked} onPair={props.onMatch} />;
-  if (challenge.t === 'bucket') return <BucketBoard challenge={challenge} you={you} locked={locked} onSubmit={props.onBucket} />;
-  if (challenge.t === 'recruit') return <RecruitBoard challenge={challenge} you={you} locked={locked} onSubmit={props.onRecruit} />;
-  return <BetBoard challenge={challenge} you={you} locked={locked} onSubmit={props.onBet} />;
+  if (challenge.t === 'match') return <MatchBoard challenge={challenge} you={you} locked={locked} onPair={props.onMatch} onLock={props.onLock} />;
+  if (challenge.t === 'bucket') return <BucketBoard challenge={challenge} you={you} locked={locked} onSubmit={props.onBucket} onLock={props.onLock} />;
+  if (challenge.t === 'recruit') return <RecruitBoard challenge={challenge} you={you} locked={locked} onSubmit={props.onRecruit} onLock={props.onLock} />;
+  return <BetBoard challenge={challenge} you={you} locked={locked} onPick={props.onBet} onLock={props.onLock} />;
 }
 
 export function useNow(serverNow: number | null) {
