@@ -63,7 +63,7 @@ export class PlayerClient {
     this.pub = null;
     this.you = null;
     this.lastRev = -1;
-    this.report('connecting', 'Đang nối vào máy chiếu…', 'Đang mở kênh mạng…', false);
+    this.report('connecting', 'Đang nối vào máy chiếu…', '', false);
     const relay = new Relay(() => this.onRelay());
     this.relay = relay;
     relay.start((topic, payload) => this.onWire(topic, payload));
@@ -72,10 +72,10 @@ export class PlayerClient {
     this.stall = window.setTimeout(() => {
       if (this.stopped || (this.pub && this.you)) return;
       const brokers = this.relay?.openIds ?? [];
-      const debug = brokers.length ? 'Đã nối ' + brokers.join(' + ') + ', chưa thấy phòng' : 'Chưa nối được HiveMQ hay EMQX';
+      const debug = brokers.length ? 'Đã có mạng, chưa thấy phòng' : 'Chưa nối được mạng';
       const detail = brokers.length
         ? 'Đã có mạng, nhưng chưa thấy phòng. Kiểm tra mã phòng và chắc rằng tab máy chiếu vẫn đang mở, rồi bấm Thử lại.'
-        : 'Không nối được kênh mạng. Kiểm tra internet (Wi-Fi hoặc 4G đều được) rồi bấm Thử lại.';
+        : 'Không nối được. Kiểm tra internet (Wi-Fi hoặc 4G đều được) rồi bấm Thử lại.';
       this.report('error', detail, debug, true);
     }, 12000);
     this.joinLoop = window.setInterval(() => this.sendJoin(), 2000);
@@ -103,13 +103,13 @@ export class PlayerClient {
     if (this.stopped || !this.relay) return;
     const open = this.relay.openIds;
     if (!open.length) {
-      this.report('connecting', 'Đang nối vào máy chiếu…', 'Đang thử lại kênh mạng…', false);
+      this.report('connecting', 'Đang nối vào máy chiếu…', '', false);
       return;
     }
     this.report(
       this.pub && this.you ? 'open' : 'connecting',
       this.pub && this.you ? '' : 'Đang nối vào máy chiếu…',
-      'Kênh ' + open.join(' + ') + ' · không cần cùng mạng với máy chiếu',
+      '',
       false,
     );
     this.sendJoin();
@@ -177,7 +177,7 @@ export class PlayerClient {
       if (this.joinLoop) window.clearInterval(this.joinLoop);
       this.joinLoop = null;
       this.handlers.onState(this.pub, this.you);
-      this.report('open', '', 'Kênh ' + (this.relay?.openIds.join(' + ') || '') , false);
+      this.report('open', '', '', false);
     }
   }
 
