@@ -3,10 +3,10 @@ import { STAGES } from '../data/stages';
 import { sounds } from '../audio/sound';
 import type { PublicChallenge, PublicState, YouState } from '../game/types';
 import { formatPoints } from '../game/text';
-import { ceremonyStep, elapsedMs, remainingMs } from '../ui/clock';
+import { elapsedMs, remainingMs } from '../ui/clock';
 import { Avatar, Grain, Star } from '../components/art';
 import { MuteButton, TimerRing } from '../components/chrome';
-import { BetBoard, ClueBoard, MapBoard, MatchBoard, TimelineBoard } from '../components/boards';
+import { BetBoard, BucketBoard, ClueBoard, MapBoard, MatchBoard, RecruitBoard, TimelineBoard } from '../components/boards';
 import { Leaderboard } from '../components/Leaderboard';
 import { Podium } from '../components/Podium';
 import { RevealCard } from '../components/RevealCard';
@@ -20,6 +20,8 @@ interface Props {
   onClue: (text: string) => void;
   onMatch: (leftId: string, rightId: string) => void;
   onBet: (pct: number, optionId: string) => void;
+  onBucket: (picks: { id: string; side: 'left' | 'right' }[]) => void;
+  onRecruit: (ids: string[]) => void;
 }
 
 function useResultSound(pub: PublicState, you: YouState) {
@@ -29,11 +31,20 @@ function useResultSound(pub: PublicState, you: YouState) {
     if (you.lastResult.correct) {
       sounds.correct();
       if (you.combo >= 2) sounds.combo();
-    } else if (you.lastResult.delta <= 0) sounds.wrong();
+      buzz(true);
+    } else if (you.lastResult.delta <= 0) {
+      sounds.wrong();
+      buzz(false);
+    }
   }, [token, you.combo, you.lastResult]);
 }
 
-export function PlayerView({ pub, you, now, onTimeline, onMap, onClue, onMatch, onBet }: Props) {
+function buzz(ok: boolean) {
+  const nav = navigator as Navigator & { vibrate?: (pattern: number | number[]) => boolean };
+  if (typeof nav.vibrate === 'function') nav.vibrate(ok ? [16, 28, 16] : [36]);
+}
+
+export function PlayerView({ pub, you, now, onTimeline, onMap, onClue, onMatch, onBet, onBucket, onRecruit }: Props) {
   const theme = pub.phase === 'podium' ? 'podium' : (pub.stage?.theme ?? 'flame');
   const remain = remainingMs(pub, now);
   const elapsed = elapsedMs(pub, now);
@@ -109,6 +120,8 @@ export function PlayerView({ pub, you, now, onTimeline, onMap, onClue, onMatch, 
               {pub.challenge.t === 'bet' ? pub.challenge.question : pub.challenge.prompt}
             </h1>
             <p className="howto">{pub.challenge.howTo}</p>
+            {pub.challenge.event === 'double' && <p className="twist">Thẻ sự kiện · Nhân đôi điểm</p>}
+            {pub.challenge.event === 'spy' && <p className="twist">Thẻ sự kiện · Mật thám: chọn nhầm bị trừ thêm</p>}
             {pub.paused && <p className="pause-flag">Giảng viên đang tạm dừng</p>}
             <PlaySwitch
               key={pub.challenge.id}
@@ -121,6 +134,8 @@ export function PlayerView({ pub, you, now, onTimeline, onMap, onClue, onMatch, 
               onClue={onClue}
               onMatch={onMatch}
               onBet={onBet}
+              onBucket={onBucket}
+              onRecruit={onRecruit}
             />
           </section>
         )}
@@ -133,12 +148,27 @@ export function PlayerView({ pub, you, now, onTimeline, onMap, onClue, onMatch, 
               </p>
             )}
             <h1>Hạng {you.rank}</h1>
+            {pub.players.some((player) => player.rank === you.rank + 1 && you.score - player.score <= 200 && you.score >= player.score) && (
+              <p className="heat">Sắp bị vượt</p>
+            )}
             <Leaderboard players={pub.players} highlightId={you.playerId} compact />
+          </section>
+        )}
+        {pub.phase === 'gate' && (
+          <section className="wait-card" data-testid="await-awards">
+            <h1>Đang chờ trao giải</h1>
+            <p>Giữ máy này. Khi giảng viên bấm Trao giải, hạng của bạn sẽ hiện tại đây.</p>
           </section>
         )}
         {pub.phase === 'podium' && (
           <>
-            <Podium players={pub.players} step={ceremonyStep(pub.ceremonyStartedAt, now)} youId={you.playerId} />
+            <section className="my-finish">
+              <p className="eyebrow">Hạng của bạn</p>
+              <h1 data-testid="final-rank">{you.rank}</h1>
+              <p className="lead">{formatPoints(you.score)} điểm</p>
+              {you.rank <= 3 && <p className="capital">Bạn trong nhóm nhận giải. Chờ giảng viên gọi tên.</p>}
+            </section>
+            <Podium players={pub.players} step={pub.ceremonyStep} youId={you.playerId} />
             <p className="wait-line">Giữ máy này. Khi giảng viên chơi lại, ván mới hiện ngay tại đây.</p>
           </>
         )}
@@ -164,12 +194,16 @@ function PlaySwitch(props: {
   onClue: (text: string) => void;
   onMatch: (leftId: string, rightId: string) => void;
   onBet: (pct: number, optionId: string) => void;
+  onBucket: (picks: { id: string; side: 'left' | 'right' }[]) => void;
+  onRecruit: (ids: string[]) => void;
 }) {
   const { challenge, you, locked } = props;
   if (challenge.t === 'timeline') return <TimelineBoard challenge={challenge} you={you} locked={locked} onSubmit={props.onTimeline} />;
   if (challenge.t === 'map') return <MapBoard challenge={challenge} you={you} locked={locked} onSubmit={props.onMap} />;
   if (challenge.t === 'clues') return <ClueBoard challenge={challenge} you={you} locked={locked} elapsed={props.elapsed} onSubmit={props.onClue} />;
   if (challenge.t === 'match') return <MatchBoard challenge={challenge} you={you} locked={locked} onPair={props.onMatch} />;
+  if (challenge.t === 'bucket') return <BucketBoard challenge={challenge} you={you} locked={locked} onSubmit={props.onBucket} />;
+  if (challenge.t === 'recruit') return <RecruitBoard challenge={challenge} you={you} locked={locked} onSubmit={props.onRecruit} />;
   return <BetBoard challenge={challenge} you={you} locked={locked} onSubmit={props.onBet} />;
 }
 

@@ -212,6 +212,8 @@ export function PlayScreen() {
         onClue={(text) => clientRef.current?.send({ t: 'clue', playerId: you.playerId, text })}
         onMatch={(leftId, rightId) => clientRef.current?.send({ t: 'match', playerId: you.playerId, leftId, rightId })}
         onBet={(wagerPct, optionId) => clientRef.current?.send({ t: 'bet', playerId: you.playerId, wagerPct, optionId })}
+        onBucket={(picks) => clientRef.current?.send({ t: 'bucket', playerId: you.playerId, picks })}
+        onRecruit={(ids) => clientRef.current?.send({ t: 'recruit', playerId: you.playerId, ids })}
       />
     </>
   );

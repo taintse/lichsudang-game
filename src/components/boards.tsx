@@ -87,6 +87,17 @@ export function TimelineBoard({
             data-item-id={item.id}
             data-testid={`item-${item.id}`}
             className={dragId.current === item.id ? 'dragging' : ''}
+            tabIndex={done ? -1 : 0}
+            onKeyDown={(event) => {
+              if (event.key === 'ArrowUp') {
+                event.preventDefault();
+                move(item.id, -1);
+              }
+              if (event.key === 'ArrowDown') {
+                event.preventDefault();
+                move(item.id, 1);
+              }
+            }}
           >
             <span className="ord">{index + 1}</span>
             <p>{item.text}</p>
@@ -320,6 +331,129 @@ export function BetBoard({
         onClick={() => pct != null && optionId && onSubmit(pct, optionId)}
       >
         {you.submitted ? 'Đã chốt cược' : 'Chốt cược'}
+      </button>
+    </div>
+  );
+}
+
+export function BucketBoard({
+  challenge,
+  you,
+  locked,
+  onSubmit,
+}: Common & {
+  challenge: Extract<PublicChallenge, { t: 'bucket' }>;
+  onSubmit: (picks: { id: string; side: 'left' | 'right' }[]) => void;
+}) {
+  const [side, setSide] = useState<Record<string, 'left' | 'right'>>({});
+  const [drag, setDrag] = useState<{ id: string; x: number } | null>(null);
+  const done = you.submitted || locked;
+  const placed = challenge.cards.filter((card) => side[card.id]);
+  const pool = challenge.cards.filter((card) => !side[card.id]);
+  const ready = pool.length === 0;
+
+  function put(id: string, next: 'left' | 'right') {
+    if (done) return;
+    setSide((current) => ({ ...current, [id]: next }));
+  }
+
+  return (
+    <div className="board-play">
+      <div className="bucket-cols">
+        {(['left', 'right'] as const).map((column) => (
+          <div key={column}>
+            <p className="col-title">{column === 'left' ? challenge.leftLabel : challenge.rightLabel}</p>
+            {placed
+              .filter((card) => side[card.id] === column)
+              .map((card) => (
+                <button type="button" key={card.id} className="tile on" disabled={done} onClick={() => put(card.id, column === 'left' ? 'right' : 'left')}>
+                  {card.text}
+                </button>
+              ))}
+          </div>
+        ))}
+      </div>
+      <div className="bucket-pool">
+        {pool.map((card) => (
+          <article
+            key={card.id}
+            className="swipe-card"
+            tabIndex={done ? -1 : 0}
+            onKeyDown={(event) => {
+              if (event.key === 'ArrowLeft') {
+                event.preventDefault();
+                put(card.id, 'left');
+              }
+              if (event.key === 'ArrowRight') {
+                event.preventDefault();
+                put(card.id, 'right');
+              }
+            }}
+            onPointerDown={(event) => setDrag({ id: card.id, x: event.clientX })}
+            onPointerUp={(event) => {
+              if (!drag || drag.id !== card.id) return;
+              const dx = event.clientX - drag.x;
+              if (dx <= -36) put(card.id, 'left');
+              else if (dx >= 36) put(card.id, 'right');
+              setDrag(null);
+            }}
+          >
+            <p>{card.text}</p>
+            <div className="nudges">
+              <button type="button" data-testid={`bucket-left-${card.id}`} disabled={done} onClick={() => put(card.id, 'left')}>
+                {challenge.leftLabel}
+              </button>
+              <button type="button" data-testid={`bucket-right-${card.id}`} disabled={done} onClick={() => put(card.id, 'right')}>
+                {challenge.rightLabel}
+              </button>
+            </div>
+          </article>
+        ))}
+      </div>
+      <button
+        type="button"
+        className="btn btn-red"
+        data-testid="bucket-lock"
+        disabled={done || !ready}
+        onClick={() => onSubmit(challenge.cards.map((card) => ({ id: card.id, side: side[card.id] })))}
+      >
+        {you.submitted ? 'Đã chốt' : 'Chốt hai phía'}
+      </button>
+    </div>
+  );
+}
+
+export function RecruitBoard({
+  challenge,
+  you,
+  locked,
+  onSubmit,
+}: Common & { challenge: Extract<PublicChallenge, { t: 'recruit' }>; onSubmit: (ids: string[]) => void }) {
+  const [ids, setIds] = useState<string[]>([]);
+  const done = you.submitted || locked;
+  function toggle(id: string) {
+    if (done) return;
+    setIds((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]));
+  }
+  return (
+    <div className="board-play">
+      <div className="options">
+        {challenge.cards.map((card) => (
+          <button
+            type="button"
+            key={card.id}
+            data-testid={`recruit-${card.id}`}
+            className={ids.includes(card.id) ? 'opt on' : 'opt'}
+            disabled={done}
+            onClick={() => toggle(card.id)}
+          >
+            {card.text}
+          </button>
+        ))}
+      </div>
+      <p className="hint">Đã chọn {ids.length}. Chọn nhầm sẽ bị trừ điểm.</p>
+      <button type="button" className="btn btn-red" data-testid="recruit-lock" disabled={done || ids.length === 0} onClick={() => onSubmit(ids)}>
+        {you.submitted ? 'Đã chốt mặt trận' : 'Chốt mặt trận'}
       </button>
     </div>
   );

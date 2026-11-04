@@ -23,7 +23,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === 'object';
 }
 
-const PHASES = new Set(['lobby', 'intro', 'play', 'reveal', 'board', 'podium']);
+const PHASES = new Set(['lobby', 'intro', 'play', 'reveal', 'board', 'gate', 'podium']);
 
 function asPublic(value: unknown, code: string): PublicState | null {
   if (!isRecord(value) || value.code !== code || typeof value.phase !== 'string' || !PHASES.has(value.phase)) return null;

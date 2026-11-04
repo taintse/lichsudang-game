@@ -114,6 +114,11 @@ class Soundboard {
     this.blip([392, 523.25, 659.25, 783.99, 1046.5], 0.16, 'triangle', 0.08);
   }
 
+  drumroll() {
+    this.ensure();
+    for (let i = 0; i < 14; i++) this.tone(120 + i * 9, 0.07, 'sine', 0.045, i * 0.06);
+  }
+
   private blip(freqs: number[], dur: number, type: OscillatorType, gain: number) {
     this.ensure();
     freqs.forEach((freq, index) => this.tone(freq, dur, type, gain, index * dur * 0.85));

@@ -35,7 +35,6 @@ describe('sơ đồ Biển Đông', () => {
 
   it('mỗi câu bản đồ có bốn mốc đủ xa để chạm', () => {
     const maps = CHALLENGES.filter((challenge) => challenge.t === 'map');
-    expect(maps.length).toBeGreaterThan(0);
     for (const challenge of maps) {
       expect(challenge.options).toHaveLength(4);
       expect(new Set(challenge.options.map((option) => option.placeId)).size).toBe(4);

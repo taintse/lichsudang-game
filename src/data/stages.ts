@@ -12,59 +12,59 @@ export interface StageMeta {
 
 export const STAGES: StageMeta[] = [
   {
-    id: 'flame',
-    year: '1930',
-    title: 'Ngọn lửa đầu tiên',
-    kicker: 'Chặng 1 · Dòng thời gian',
+    id: 'boiCanh',
+    year: '1935–36',
+    title: 'Bối cảnh đổi',
+    kicker: 'Chặng 1 · Xếp chuỗi',
     blurb:
-      'Từ Hội nghị hợp nhất năm 1930 đến đêm toàn quốc kháng chiến. Kéo các mốc về đúng thứ tự — trên cùng là sự kiện sớm nhất.',
-    howTo: 'Kéo thả hoặc bấm mũi tên. Trên cùng là sự kiện xảy ra sớm nhất.',
+      'Bạn là một cán bộ. Thế giới và trong nước đã khác năm 1930. Hãy xếp đúng chuỗi thích ứng — bước đầu ở trên cùng.',
+    howTo: 'Kéo thả hoặc bấm mũi tên. Trên cùng là bước xảy ra trước.',
     theme: 'flame',
   },
   {
-    id: 'autumn',
-    year: '1945',
-    title: 'Mùa thu cách mạng',
-    kicker: 'Chặng 2 · Chọn địa danh',
+    id: 'nhiemVu',
+    year: '1936',
+    title: 'Đổi nhiệm vụ trước mắt',
+    kicker: 'Chặng 2 · Chia hai phía',
     blurb:
-      'Cách mạng tháng Tám và những địa danh đã đi vào lịch sử. Trên sơ đồ có bốn dấu — chọn đúng nơi sự kiện diễn ra.',
-    howTo: 'Chạm một dấu. Ngôi sao là lựa chọn của bạn. Có thể đổi trước khi chốt.',
+      'Nhiệm vụ trước mắt đổi, mục tiêu lâu dài thì không bỏ. Đưa mỗi khẩu hiệu về đúng thời kỳ hoặc đúng cách hiểu.',
+    howTo: 'Đưa mỗi thẻ sang trái hoặc phải. Chốt khi đã xếp hết.',
     theme: 'autumn',
   },
   {
-    id: 'dbp',
-    year: '1954',
-    title: 'Điện Biên Phủ',
-    kicker: 'Chặng 3 · Mở manh mối',
+    id: 'lucLuong',
+    year: '1936–39',
+    title: 'Mở rộng mặt trận',
+    kicker: 'Chặng 3 · Chiêu mộ',
     blurb:
-      'Kháng chiến chống thực dân Pháp, đỉnh cao là chiến dịch Điện Biên Phủ và Hiệp định Giơ-ne-vơ. Manh mối hiện dần — đoán càng sớm càng được nhiều điểm.',
-    howTo: 'Chọn một phương án hoặc gõ đáp án. Đoán sai bị trừ điểm. Đoán đúng sớm được điểm cao.',
+      'Không chỉ công nhân và nông dân. Hãy tập hợp những người có chung yêu cầu dân sinh, dân chủ, hòa bình.',
+    howTo: 'Chạm để đưa vào mặt trận. Chọn nhầm sẽ bị trừ. Bấm lại để bỏ ra trước khi chốt.',
     theme: 'dbp',
   },
   {
-    id: 'victory',
-    year: '1975',
-    title: 'Thống nhất đất nước',
+    id: 'phuongPhap',
+    year: '1936–37',
+    title: 'Đổi cách đấu tranh',
     kicker: 'Chặng 4 · Nối cặp',
     blurb:
-      'Từ Nghị quyết 15 đến mùa xuân 1975. Nối chiến dịch, sự kiện với năm hoặc ý nghĩa — nhanh và đúng thì có thưởng tốc độ.',
-    howTo: 'Chọn một ô bên trái, rồi chọn ô bên phải khớp với nó. Ghép hết trước khi hết giờ.',
+      'Công khai đi với bí mật, hợp pháp đi với nửa hợp pháp. Nối mỗi việc với cách làm phù hợp.',
+    howTo: 'Chọn một ô bên trái, rồi chọn ô bên phải khớp với nó.',
     theme: 'victory',
   },
   {
-    id: 'doimoi',
-    year: '1986',
-    title: 'Đổi mới',
+    id: 'baiHoc',
+    year: '1939',
+    title: 'Bốn chìa khóa',
     kicker: 'Chặng 5 · Đặt cược',
     blurb:
-      'Đại hội VI và những quyết sách Đổi mới. Mỗi người được cấp thêm 800 điểm vốn. Mang điểm đang có ra cược — đúng thì phần cược được nhân đôi, sai thì mất.',
-    howTo: 'Chọn mức cược và một phương án rồi chốt. Đúng: được cộng đúng số điểm đã cược. Sai: mất số điểm đó.',
+      'Bốn bài học và lời kết. Mỗi người được thêm 800 điểm vốn. Cược đúng thì được cộng đúng phần đã cược, cược sai thì mất.',
+    howTo: 'Chọn mức cược và một phương án rồi chốt. Đúng được cộng phần cược. Sai mất phần cược.',
     theme: 'doimoi',
   },
 ];
 
 export function stageById(id: string): StageMeta {
-  const stage = STAGES.find((s) => s.id === id);
+  const stage = STAGES.find((item) => item.id === id);
   if (!stage) throw new Error('Không có chặng ' + id);
   return stage;
 }

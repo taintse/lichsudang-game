@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { GameRoom } from './room';
 import { CHALLENGES } from '../data/questions';
+import { scheduledRunMs, SESSION_LIMIT_MS } from '../data/timing';
 import { foldVi, fuzzyMatch } from './text';
 import { mapBand, orderStats } from './scoring';
 
@@ -46,6 +47,12 @@ function answer(room: GameRoom, playerId: string, mode: 'perfect' | 'wrong') {
   } else if (key.t === 'bet' && challenge.t === 'bet') {
     const optionId = mode === 'perfect' ? key.optionId! : challenge.options.find((option) => option.id !== key.optionId)!.id;
     room.handleClient({ t: 'bet', playerId, wagerPct: 100, optionId });
+  } else if (key.t === 'bucket' && key.picks) {
+    const picks = mode === 'perfect' ? key.picks : key.picks.map((pick) => ({ id: pick.id, side: pick.side === 'left' ? ('right' as const) : ('left' as const) }));
+    room.handleClient({ t: 'bucket', playerId, picks });
+  } else if (key.t === 'recruit' && key.ids) {
+    const ids = mode === 'perfect' ? key.ids : [...key.ids.slice(0, 1), ...(key.wrongIds ?? [])];
+    room.handleClient({ t: 'recruit', playerId, ids });
   }
 }
 
@@ -73,20 +80,22 @@ describe('phòng chơi', () => {
     const { room } = setup();
     room.next();
     const hidden = JSON.stringify(room.publicState());
-    expect(hidden).not.toContain('3/2/1930');
+    expect(hidden).not.toContain('Bước 1');
     expect(hidden).not.toContain('correctId');
     expect(hidden).not.toContain('aliases');
-    expect(hidden).not.toContain('22.94');
     expect(hidden).not.toContain('"sort"');
+    expect(hidden).not.toContain('"bucket"');
+    expect(hidden).not.toContain('"ok"');
     room.next();
     const shown = JSON.stringify(room.publicState());
-    expect(shown).toContain('3/2/1930');
-    expect(room.publicState().reveal?.timeline?.[0].year).toBe('3/2/1930');
+    expect(shown).toContain('Bước 1');
+    expect(room.publicState().reveal?.timeline?.[0].year).toBe('Bước 1');
   });
 
   it('chơi đủ 5 chặng, cược tất tay có thể đảo hạng', () => {
     const { room } = setup();
-    expect(CHALLENGES).toHaveLength(27);
+    expect(CHALLENGES).toHaveLength(11);
+    expect(scheduledRunMs()).toBeLessThanOrEqual(SESSION_LIMIT_MS);
     for (let i = 0; i < CHALLENGES.length; i++) {
       if (room.getState().phase === 'intro') room.next();
       expect(room.getState().phase).toBe('play');
@@ -99,6 +108,10 @@ describe('phòng chơi', () => {
       expect(room.getState().phase).toBe('board');
       room.next();
     }
+    expect(room.getState().phase).toBe('gate');
+    room.startAwards();
+    expect(room.publicState().ceremonyStep).toBe(0);
+    room.skipCeremony();
     expect(room.getState().phase).toBe('podium');
     const players = room.publicState().players;
     const an = players.find((player) => player.name === 'An');
@@ -146,7 +159,7 @@ describe('phòng chơi', () => {
   it('người vào muộn ở chặng Đổi mới nhận 800 điểm vốn', () => {
     const { room } = setup();
     while (room.getState().phase !== 'podium') {
-      if (room.getState().phase === 'intro' && room.publicState().stage?.id === 'doimoi') break;
+      if (room.getState().phase === 'intro' && room.publicState().stage?.id === 'baiHoc') break;
       if (room.getState().phase === 'intro' || room.getState().phase === 'reveal' || room.getState().phase === 'board' || room.getState().phase === 'lobby') {
         room.next();
       } else if (room.getState().phase === 'play') {
@@ -162,13 +175,27 @@ describe('phòng chơi', () => {
     expect(room.youState('playerA1')!.score).toBe(before);
   });
 
+  it('hòa điểm thì người trả lời nhanh hơn xếp trên', () => {
+    const { room, setNow } = setup();
+    room.next();
+    const started = room.getState().challengeStartedAt ?? 0;
+    setNow(started + 1000);
+    answer(room, 'playerB1', 'wrong');
+    setNow(started + 9000);
+    answer(room, 'playerA1', 'wrong');
+    room.next();
+    const players = room.publicState().players;
+    expect(players.find((player) => player.name === 'Bình')?.rank).toBe(1);
+    expect(players.find((player) => player.name === 'An')?.rank).toBe(2);
+  });
+
   it('kết thúc phòng rồi chơi lại giữ người và xoá điểm', () => {
     const { room } = setup();
     room.next();
     const key = room.debugKey();
     room.handleClient({ t: 'timeline', playerId: 'playerA1', order: key!.order! });
     room.finishNow();
-    expect(room.getState().phase).toBe('podium');
+    expect(room.getState().phase).toBe('gate');
     expect(room.youState('playerA1')!.score).toBeGreaterThan(0);
     const rev = room.publicState().rev;
     room.replay();

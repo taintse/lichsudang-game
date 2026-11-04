@@ -8,6 +8,7 @@ import { clearHostSave, loadHostSave, saveHostSave } from '../net/identity';
 import { HostServer, type NetNotice } from '../net/hostServer';
 import { HostView } from './HostView';
 import { useNow } from './PlayerView';
+import { useAutoAdvance } from '../ui/autoplay';
 import { Boot } from '../components/chrome';
 
 function roomLink(code: string) {
@@ -102,6 +103,8 @@ export function HostScreen() {
     };
   }, [code]);
 
+  useAutoAdvance(roomRef);
+
   const room = roomRef.current;
   const now = useNow(room ? room.publicState().serverNow : null);
   if (!room || !code) {
@@ -133,7 +136,10 @@ export function HostScreen() {
       notice={notice.status === 'open' ? undefined : notice.error || notice.debug || 'Đang nối kênh mạng…'}
       onNext={() => {
         sounds.unlock();
-        room.next();
+        const phase = room.getState().phase;
+        if (phase === 'gate') room.startAwards();
+        else if (phase === 'podium') room.advanceCeremony();
+        else room.next();
       }}
       onPause={() => room.pause()}
       onResume={() => room.resume()}

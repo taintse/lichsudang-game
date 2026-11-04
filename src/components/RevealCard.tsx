@@ -61,6 +61,16 @@ export function RevealCard({ reveal, you, big = false }: { reveal: RevealPublic;
           ))}
         </ul>
       )}
+      {reveal.cards && (
+        <ul className="answer-list pairs">
+          {reveal.cards.map((card) => (
+            <li key={card.text}>
+              <span>{card.text}</span>
+              <b>{card.side}</b>
+            </li>
+          ))}
+        </ul>
+      )}
       <p className="explain">{reveal.explanation}</p>
     </article>
   );

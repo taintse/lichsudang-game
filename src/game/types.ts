@@ -1,6 +1,8 @@
 import type { ThemeId } from '../data/stages';
 
-export type Phase = 'lobby' | 'intro' | 'play' | 'reveal' | 'board' | 'podium';
+export type Phase = 'lobby' | 'intro' | 'play' | 'reveal' | 'board' | 'gate' | 'podium';
+
+export type Twist = 'double' | 'spy';
 
 export interface StagePublic {
   id: string;
@@ -19,6 +21,7 @@ export interface PublicTimeline {
   timeLimit: number;
   howTo: string;
   items: { id: string; text: string }[];
+  event?: Twist;
 }
 
 export interface PublicMap {
@@ -28,6 +31,7 @@ export interface PublicMap {
   timeLimit: number;
   howTo: string;
   markers: { id: string; x: number; y: number }[];
+  event?: Twist;
 }
 
 export interface PublicClues {
@@ -38,6 +42,7 @@ export interface PublicClues {
   howTo: string;
   clues: { text: string; revealAt: number }[];
   options: string[];
+  event?: Twist;
 }
 
 export interface PublicMatch {
@@ -48,6 +53,7 @@ export interface PublicMatch {
   howTo: string;
   left: { id: string; text: string }[];
   right: { id: string; text: string }[];
+  event?: Twist;
 }
 
 export interface PublicBet {
@@ -58,9 +64,32 @@ export interface PublicBet {
   timeLimit: number;
   howTo: string;
   options: { id: string; text: string }[];
+  event?: Twist;
 }
 
-export type PublicChallenge = PublicTimeline | PublicMap | PublicClues | PublicMatch | PublicBet;
+export interface PublicBucket {
+  t: 'bucket';
+  id: string;
+  prompt: string;
+  timeLimit: number;
+  howTo: string;
+  leftLabel: string;
+  rightLabel: string;
+  cards: { id: string; text: string }[];
+  event?: Twist;
+}
+
+export interface PublicRecruit {
+  t: 'recruit';
+  id: string;
+  prompt: string;
+  timeLimit: number;
+  howTo: string;
+  cards: { id: string; text: string }[];
+  event?: Twist;
+}
+
+export type PublicChallenge = PublicTimeline | PublicMap | PublicClues | PublicMatch | PublicBet | PublicBucket | PublicRecruit;
 
 export interface RevealPublic {
   headline: string;
@@ -68,6 +97,7 @@ export interface RevealPublic {
   timeline?: { text: string; year: string }[];
   map?: { choices: { id: string; x: number; y: number; label: string; count: number; correct: boolean }[] };
   pairs?: { left: string; right: string }[];
+  cards?: { text: string; side: string }[];
 }
 
 export interface PublicPlayer {
@@ -78,6 +108,8 @@ export interface PublicPlayer {
   combo: number;
   rank: number;
   prevRank: number;
+  prevScore: number;
+  answerMs: number;
   connected: boolean;
   submitted: boolean;
 }
@@ -97,6 +129,8 @@ export interface PublicState {
   reveal: RevealPublic | null;
   players: PublicPlayer[];
   ceremonyStartedAt: number | null;
+  /** 0 fireworks, 1 third, 2 second, 3 first, 4 final table. Host advances this. */
+  ceremonyStep: number;
   /** Increments on every authoritative change so late broker copies are ignored. */
   rev: number;
   /** Host reset scores and returned this room to the lobby. */
@@ -132,7 +166,9 @@ export type ClientMessage =
   | { t: 'map'; playerId: string; choice: string }
   | { t: 'clue'; playerId: string; text: string }
   | { t: 'match'; playerId: string; leftId: string; rightId: string }
-  | { t: 'bet'; playerId: string; wagerPct: number; optionId: string };
+  | { t: 'bet'; playerId: string; wagerPct: number; optionId: string }
+  | { t: 'bucket'; playerId: string; picks: { id: string; side: 'left' | 'right' }[] }
+  | { t: 'recruit'; playerId: string; ids: string[] };
 
 export type ServerMessage =
   | { t: 'state'; public: PublicState; you: YouState }

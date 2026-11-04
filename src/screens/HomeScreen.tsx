@@ -21,7 +21,7 @@ export function HomeScreen() {
           Sử Đảng
         </h1>
         <p className="lead">
-          Cả lớp chơi trên điện thoại và laptop. Máy chiếu giữ phòng, tính điểm và trao thưởng cho ba người dẫn đầu.
+          Phong trào dân chủ 1936–1939. Cả lớp chơi trên điện thoại và laptop. Máy chiếu giữ phòng, tính điểm và trao giải cho ba người dẫn đầu.
         </p>
         <ol className="year-row">
           {STAGES.map((stage) => (
@@ -47,8 +47,8 @@ export function HomeScreen() {
           <ul>
             <li>Đúng và nhanh được nhiều điểm hơn.</li>
             <li>Đúng liên tiếp thì có chuỗi combo, tối đa ×1,6.</li>
-            <li>Chặng Đổi mới được cược điểm: đúng thì phần cược nhân đôi, sai thì mất phần cược.</li>
-            <li>Hòa điểm thì người vào phòng trước xếp trên.</li>
+            <li>Chặng cuối được cược điểm: đúng thì được cộng phần đã cược, sai thì mất phần đó.</li>
+            <li>Hòa điểm thì người có tổng thời gian trả lời ngắn hơn xếp trên.</li>
           </ul>
         </section>
       </main>

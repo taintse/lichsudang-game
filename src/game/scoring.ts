@@ -30,7 +30,17 @@ export interface BetPending {
   optionId: string;
   at: number;
 }
-export type Pending = TimelinePending | MapPending | CluePending | MatchPending | BetPending;
+export interface BucketPending {
+  kind: 'bucket';
+  picks: { id: string; side: 'left' | 'right' }[];
+  at: number;
+}
+export interface RecruitPending {
+  kind: 'recruit';
+  ids: string[];
+  at: number;
+}
+export type Pending = TimelinePending | MapPending | CluePending | MatchPending | BetPending | BucketPending | RecruitPending;
 
 export interface Grade {
   perfect: boolean;
@@ -144,6 +154,54 @@ export function gradeAnswer(
     };
   }
 
+  if (challenge.t === 'bucket') {
+    if (!pending || pending.kind !== 'bucket') {
+      return { perfect: false, base: 0, wagerDelta: 0, note: 'Chưa xếp' };
+    }
+    const want = new Map(challenge.cards.map((card) => [card.id, card.bucket]));
+    const seen = new Set<string>();
+    let correct = 0;
+    for (const pick of pending.picks) {
+      if (seen.has(pick.id) || !want.has(pick.id)) continue;
+      seen.add(pick.id);
+      if (want.get(pick.id) === pick.side) correct += 1;
+    }
+    const total = challenge.cards.length;
+    const perfect = total > 0 && correct === total && seen.size === total;
+    const speed = perfect ? Math.round(400 * remainRatio(pending.at - startedAt, timeLimitMs)) : 0;
+    return {
+      perfect,
+      base: Math.round(1000 * (total ? correct / total : 0)) + speed,
+      wagerDelta: 0,
+      note: perfect ? 'Đúng cả hai phía' : `Đúng ${correct}/${total} thẻ`,
+    };
+  }
+
+  if (challenge.t === 'recruit') {
+    if (!pending || pending.kind !== 'recruit') {
+      return { perfect: false, base: 0, wagerDelta: 0, note: 'Chưa chiêu mộ' };
+    }
+    const selected = new Set(pending.ids);
+    let okTotal = 0;
+    let hit = 0;
+    let wrong = 0;
+    for (const card of challenge.cards) {
+      if (card.ok) {
+        okTotal += 1;
+        if (selected.has(card.id)) hit += 1;
+      } else if (selected.has(card.id)) wrong += 1;
+    }
+    const perfect = okTotal > 0 && hit === okTotal && wrong === 0;
+    const speed = perfect ? Math.round(400 * remainRatio(pending.at - startedAt, timeLimitMs)) : 0;
+    const base = Math.round(1000 * (okTotal ? hit / okTotal : 0)) - wrong * 180 + speed;
+    return {
+      perfect,
+      base,
+      wagerDelta: 0,
+      note: perfect ? 'Đủ lực lượng' : `Đúng ${hit}/${okTotal} · chọn nhầm ${wrong}`,
+    };
+  }
+
   if (challenge.t === 'match') {
     const pairs = pending?.kind === 'match' ? pending.pairs : [];
     const mistakes = pending?.kind === 'match' ? pending.mistakes : 0;
@@ -178,6 +236,25 @@ export function gradeAnswer(
     wagerDelta: correct ? wager : picked ? -wager : 0,
     note,
   };
+}
+
+export function applyTwist(challenge: Challenge, grade: Grade, answered: boolean): Grade {
+  if (!challenge.event || !answered) return grade;
+  if (challenge.event === 'double' && grade.base > 0) {
+    return { ...grade, base: grade.base * 2, note: `${grade.note} · nhân đôi` };
+  }
+  if (challenge.event === 'spy' && !grade.perfect) {
+    return { ...grade, base: grade.base - 200, note: `${grade.note} · mật thám` };
+  }
+  return grade;
+}
+
+export function spentMs(pending: Pending | null, startedAt: number, timeLimitMs: number): number {
+  if (!pending) return timeLimitMs;
+  const cap = (at: number) => Math.max(0, Math.min(timeLimitMs, at - startedAt));
+  if (pending.kind === 'clues') return pending.solvedAt == null ? timeLimitMs : cap(pending.solvedAt);
+  if (pending.kind === 'match') return pending.doneAt == null ? timeLimitMs : cap(pending.doneAt);
+  return cap(pending.at);
 }
 
 export function applyGrade(score: number, combo: number, grade: Grade): { score: number; combo: number; delta: number } {
