@@ -25,7 +25,7 @@ Một phòng khoảng 40–60 người. Vượt quá mức đó, người vào s
 
 | Thời | Tên | Cách chơi |
 | --- | --- | --- |
-| 1935–36 | Bối cảnh đổi | Kéo thả (hoặc nút ▲▼, phím mũi tên) xếp sáu bước thích ứng. Rồi chia thẻ thế giới / trong nước (vuốt hoặc nút, phím ← →) |
+| 1935–36 | Bối cảnh đổi | Kéo thả (hoặc nút ▲▼, phím mũi tên) xếp bốn bước then chốt. Rồi chia thẻ thế giới / trong nước (vuốt hoặc nút, phím ← →) |
 | 1936 | Đổi nhiệm vụ trước mắt | Chia khẩu hiệu 1930–1931 với 1936–1939, và cách hiểu đúng / hiểu sai |
 | 1936–39 | Mở rộng mặt trận | Chạm để chiêu mộ đúng lực lượng. Một vòng mật thám: chọn nhầm bị trừ thêm. Rồi chia điểm chung / điều không bắt buộc |
 | 1936–37 | Đổi cách đấu tranh | Nối cách làm và nối phong trào tiêu biểu. Một vòng được nhân đôi điểm |
@@ -33,7 +33,7 @@ Một phòng khoảng 40–60 người. Vượt quá mức đó, người vào s
 
 Đúng liên tiếp có chuỗi combo (tối đa ×1,6) và thưởng tốc độ khi câu hoàn hảo. Đầu chặng cược mỗi người được cộng **800 điểm vốn**. Hòa điểm: người có tổng thời gian trả lời ngắn hơn xếp trên; nếu vẫn hòa thì người vào phòng trước xếp trên.
 
-**11 câu.** Nếu không ai bấm bỏ qua, cả ván từ chặng đầu tới màn «Sẵn sàng trao giải» mất khoảng **6 phút 53 giây** (5 lần giới thiệu × 7 giây + 202 giây trả lời + 11 × 16 giây đáp án và bảng). Lễ trao giải do giảng viên bấm, không tính vào 12 phút. Không có thanh thời gian tổng trên máy chiếu.
+**11 câu, mỗi câu tối đa 4 thẻ.** Nếu không ai bấm bỏ qua, cả ván từ chặng đầu tới màn «Sẵn sàng trao giải» mất khoảng **5 phút 49 giây** (5 lần giới thiệu × 7 giây + 138 giây trả lời + 11 × 16 giây đáp án và bảng). Lễ trao giải do giảng viên bấm, không tính vào 12 phút. Không có thanh thời gian tổng trên máy chiếu.
 
 Người chơi dùng điện thoại hoặc laptop, cùng trang **Vào phòng**. Vuốt có nút và phím mũi tên. Nút bấm cao ít nhất 44px. Chạm lần đầu bật tiếng.
 
