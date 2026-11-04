@@ -17,7 +17,7 @@ Không ghi các câu cũ là sai sử. Lý do gỡ là lệch đề.
 
 | Câu | Kiểu | Nguồn trong bài |
 | --- | --- | --- |
-| Sáu bước thích ứng | Xếp thứ tự | Mục 7, đúng thứ tự trong bài |
+| Bốn bước then chốt của chuỗi thích ứng | Xếp thứ tự | Mục 7. Giữ bước 1, 3, 4, 5 đúng thứ tự. Bước «đánh giá lại tương quan lực lượng» và «tích lũy cho mục tiêu lâu dài» nằm trong lời giải, không thành thẻ riêng |
 | Thế giới / trong nước | Chia hai phía | Mục 1 |
 | Nhiệm vụ 1930–1931 và 1936–1939 | Chia hai phía | Mục 2 |
 | Hiểu đúng / hiểu sai về thích ứng | Chia hai phía | Mục 2 và mục 9 |
@@ -29,6 +29,17 @@ Không ghi các câu cũ là sai sử. Lý do gỡ là lệch đề.
 | Giữ mục tiêu, đổi cách đi | Cược | Mục 9 |
 | Bốn chìa khóa | Cược | Mục 9. Kết quả ở mục 6 nằm trong lời giải |
 
+## Rút gọn mỗi câu còn tối đa 4 thẻ
+
+Mỗi câu chỉ còn 4 thẻ hoặc 4 phương án, chữ trên thẻ không quá 10 chữ, để đọc kịp trên điện thoại. Nội dung bị rút khỏi thẻ vẫn nằm trong lời giải, không bị đổi nghĩa:
+
+- Chuỗi sáu bước: thẻ chỉ còn bối cảnh → nhiệm vụ trước mắt → lực lượng → cách đấu tranh.
+- Bối cảnh: bỏ thẻ Đại hội VII (1935); sự kiện này được đọc trong lời giải.
+- Nhiệm vụ: 1930–1931 còn chống đế quốc và chống phong kiến; 1936–1939 còn chống thực dân phản động và «cơm áo và hòa bình». Chống phát xít, chống chiến tranh nằm trong lời giải.
+- Chiêu mộ: bốn lựa chọn — công nhân và nông dân; tiểu tư sản và trí thức; lực lượng dân chủ; thế lực phát xít (chọn nhầm). Thế lực thực dân phản động được nói trong lời giải.
+- Điểm chung: dân sinh, dân chủ, hòa bình, và «cùng mục tiêu lâu dài» là điều không bắt buộc.
+- Nối cặp và cược vẫn bốn ý, chỉ rút câu cho ngắn. Bốn chìa khóa trên thẻ đúng là: giữ mục tiêu, linh hoạt, mở rộng, thích ứng.
+
 ## Ngân sách thời gian
 
-5 lời giới thiệu × 7 giây + 202 giây trả lời + 11 × (10 giây đáp án + 6 giây bảng) = 413 giây, khoảng 6 phút 53 giây, dưới 12 phút. Không có đồng hồ tổng. Lễ trao giải chỉ chạy khi giảng viên bấm Trao giải.
+5 lời giới thiệu × 7 giây + 138 giây trả lời + 11 × (10 giây đáp án + 6 giây bảng) = 349 giây, khoảng 5 phút 49 giây, dưới 12 phút. Không có đồng hồ tổng. Lễ trao giải chỉ chạy khi giảng viên bấm Trao giải.

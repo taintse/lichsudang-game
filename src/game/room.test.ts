@@ -96,6 +96,20 @@ describe('phòng chơi', () => {
     const { room } = setup();
     expect(CHALLENGES).toHaveLength(11);
     expect(scheduledRunMs()).toBeLessThanOrEqual(SESSION_LIMIT_MS);
+    for (const challenge of CHALLENGES) {
+      const texts =
+        challenge.t === 'timeline'
+          ? challenge.items.map((item) => item.text)
+          : challenge.t === 'bucket' || challenge.t === 'recruit'
+            ? challenge.cards.map((card) => card.text)
+            : challenge.t === 'match'
+              ? challenge.pairs.flatMap((pair) => [pair.left, pair.right])
+              : challenge.t === 'bet'
+                ? challenge.options.map((option) => option.text)
+                : [];
+      expect(texts.length).toBeLessThanOrEqual(challenge.t === 'match' ? 8 : 4);
+      for (const text of texts) expect(text.trim().split(/\s+/).length).toBeLessThanOrEqual(10);
+    }
     for (let i = 0; i < CHALLENGES.length; i++) {
       if (room.getState().phase === 'intro') room.next();
       expect(room.getState().phase).toBe('play');
